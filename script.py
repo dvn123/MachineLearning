@@ -8,11 +8,12 @@ import struct
 import math
 
 from sklearn import datasets, svm, metrics
+from sklearn.decomposition import RandomizedPCA
+from sklearn.naive_bayes import GaussianNB
 
+IMG_SIZE = (80,80)
 
 def get_image_size(fname):
-    '''Determine the image type of fhandle and return its size.
-    from draco'''
     with open(fname, 'rb') as fhandle:
         head = fhandle.read(24)
         if len(head) != 24:
@@ -26,6 +27,17 @@ def get_image_size(fname):
             return
         return width, height
 
+def img_to_matrix(filename, size, verbose=False):
+    img = Image.open(filename)
+    img = img.resize(size)
+    img = list(img.getdata())
+    img = np.array(img)
+    return img
+
+def flatten_image(img):
+    s = img.shape[0] * img.shape[1]
+    img_wide = img.reshape(1, s)
+    return img_wide[0]
 
 def load_dataset(img_dir):
     superclasses = [f for f in os.listdir(img_dir)]
@@ -48,101 +60,38 @@ def load_dataset(img_dir):
                 labels.append([superclass + "/" + subclass])
 
     image_x_y_mean = list(map(lambda x: math.floor(x/n_images), image_x_y_mean))
-    print(image_x_y_mean)
+    global IMG_SIZE
+    IMG_SIZE = image_x_y_mean
 
     #setup a standard image size; this will distort some images but will get everything into the same shape
-    STANDARD_SIZE = image_x_y_mean
-    def img_to_matrix(filename, verbose=False):
-        """
-        takes a filename and turns it into a numpy array of RGB pixels
-        """
-        img = Image.open(filename)
-        #if verbose==True:
-            #print ("changing size from %s to %s" % (str(img.size), str(STANDARD_SIZE)))
-        img = img.resize(STANDARD_SIZE)
-        img = list(img.getdata())
-        #img = map(list, img)
-        img = np.array(img)
-        return img
-
-    def flatten_image(img):
-        """
-        takes in an (m, n) numpy array and flattens it
-        into an array of shape (1, m * n)
-        """
-        s = img.shape[0] * img.shape[1]
-        img_wide = img.reshape(1, s)
-        return img_wide[0]
-
     data = []
     for image in images:
-        img = img_to_matrix(image)
+        img = img_to_matrix(image, IMG_SIZE)
         img = flatten_image(img)
         data.append(img)
 
-    data = np.array(data)
-    print(data[0])
+    return (np.array(data), labels)
+
+def load_testset(img_dir):
+    images = [img_dir + f for f in os.listdir(img_dir)]
+    print(images)
+
+    #setup a standard image size; this will distort some images but will get everything into the same shape
+    data = []
+    for image in images:
+        img = img_to_matrix(image, IMG_SIZE)
+        img = flatten_image(img)
+        data.append(img)
+
+    return np.array(data)
+
+(data, labels) = load_dataset('train/')
+testdata = load_testset('test/')
+pca = RandomizedPCA(n_components=5)
+train_x = pca.fit_transform(data)
+test_x = pca.transform(testdata)
 
 
-'''
-def img_to_matrix(filename, verbose=False):
-    """
-    takes a filename and turns it into a numpy array of RGB pixels
-    """
-    img = Image.open(filename)
-    if verbose==True:
-        print "changing size from %s to %s" % (str(img.size), str(STANDARD_SIZE))
-    img = img.resize(STANDARD_SIZE)
-    img = list(img.getdata())
-    img = map(list, img)
-    img = np.array(img)
-    return img
-'''
-
-load_dataset('train/')
-#feature_extraction()
-#
-
-
-'''
-# The data that we are interested in is made of 8x8 images of digits, let's
-# have a look at the first 3 images, stored in the `images` attribute of the
-# dataset.  If we were working from image files, we could load them using
-# pylab.imread.  Note that each image must have the same size. For these
-# images, we know which digit they represent: it is given in the 'target' of
-# the dataset.
-images_and_labels = list(zip(digits.images, digits.target))
-for index, (image, label) in enumerate(images_and_labels[:4]):
-    plt.subplot(2, 4, index + 1)
-    plt.axis('off')
-    plt.imshow(image, cmap=plt.cm.gray_r, interpolation='nearest')
-    plt.title('Training: %i' % label)
-
-# To apply a classifier on this data, we need to flatten the image, to
-# turn the data in a (samples, feature) matrix:
-n_samples = len(digits.images)
-data = digits.images.reshape((n_samples, -1))
-
-# Create a classifier: a support vector classifier
-classifier = svm.SVC(gamma=0.001)
-
-# We learn the digits on the first half of the digits
-classifier.fit(data[:n_samples / 2], digits.target[:n_samples / 2])
-
-# Now predict the value of the digit on the second half:
-expected = digits.target[n_samples / 2:]
-predicted = classifier.predict(data[n_samples / 2:])
-
-print("Classification report for classifier %s:\n%s\n"
-      % (classifier, metrics.classification_report(expected, predicted)))
-print("Confusion matrix:\n%s" % metrics.confusion_matrix(expected, predicted))
-
-images_and_predictions = list(zip(digits.images[n_samples / 2:], predicted))
-for index, (image, prediction) in enumerate(images_and_predictions[:4]):
-    plt.subplot(2, 4, index + 5)
-    plt.axis('off')
-    plt.imshow(image, cmap=plt.cm.gray_r, interpolation='nearest')
-    plt.title('Prediction: %i' % prediction)
-
-plt.show()
-'''
+gnb = GaussianNB()
+y_pred = gnb.fit(data, labels).predict(data)
+print("Number of mislabeled points out of a total 1 points : %d",(labels != y_pred).sum())
