@@ -74,7 +74,6 @@ def load_dataset(img_dir):
 
 def load_testset(img_dir):
     images = [img_dir + f for f in os.listdir(img_dir)]
-    print(images)
 
     #setup a standard image size; this will distort some images but will get everything into the same shape
     data = []
@@ -91,7 +90,10 @@ pca = RandomizedPCA(n_components=5)
 train_x = pca.fit_transform(data)
 test_x = pca.transform(testdata)
 
+print("TRAIN_X: ", train_x)
+print("TEST_X: ", test_x)
 
 gnb = GaussianNB()
-y_pred = gnb.fit(data, labels).predict(data)
+y_pred = gnb.fit(train_x, labels).predict(test_x)
+print("Y_PRED:", y_pred)
 print("Number of mislabeled points out of a total 1 points : %d",(labels != y_pred).sum())
