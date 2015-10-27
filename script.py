@@ -1,14 +1,30 @@
-print(__doc__)
-
 # Standard scientific Python imports
 import matplotlib.pyplot as plt
+import os
+import numpy as np
 
-# Import datasets, classifiers and performance metrics
 from sklearn import datasets, svm, metrics
 
-# The digits dataset
-digits = datasets.load_digits()
+img_dir = "train/"
+superclasses = [f for f in os.listdir(img_dir)]
+images = []
+labels = []
 
+for superclass in superclasses:
+    for subclass in os.listdir(img_dir + superclass):
+        for image in os.listdir(img_dir + superclass + "/" + subclass):
+            images.append(img_dir + superclass + "/" + subclass + "/" + image)
+            labels.append([superclass + "/" + subclass])
+
+
+#for image in images:
+    #img = img_to_matrix(image)
+    #img = flatten_image(img)
+    #data.append(img)
+
+#data = np.array(data)
+
+'''
 # The data that we are interested in is made of 8x8 images of digits, let's
 # have a look at the first 3 images, stored in the `images` attribute of the
 # dataset.  If we were working from image files, we could load them using
@@ -49,3 +65,4 @@ for index, (image, prediction) in enumerate(images_and_predictions[:4]):
     plt.title('Prediction: %i' % prediction)
 
 plt.show()
+'''
