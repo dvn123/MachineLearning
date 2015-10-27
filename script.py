@@ -1,28 +1,79 @@
 # Standard scientific Python imports
+from PIL import Image
 import matplotlib.pyplot as plt
 import os
 import numpy as np
+import imghdr
+import struct
 
 from sklearn import datasets, svm, metrics
 
-img_dir = "train/"
-superclasses = [f for f in os.listdir(img_dir)]
-images = []
-labels = []
 
-for superclass in superclasses:
-    for subclass in os.listdir(img_dir + superclass):
-        for image in os.listdir(img_dir + superclass + "/" + subclass):
-            images.append(img_dir + superclass + "/" + subclass + "/" + image)
-            labels.append([superclass + "/" + subclass])
+def get_image_size(fname):
+    '''Determine the image type of fhandle and return its size.
+    from draco'''
+    with open(fname, 'rb') as fhandle:
+        head = fhandle.read(24)
+        if len(head) != 24:
+            return
+        if imghdr.what(fname) == 'png':
+            check = struct.unpack('>i', head[4:8])[0]
+            if check != 0x0d0a1a0a:
+                return
+            width, height = struct.unpack('>ii', head[16:24])
+        else:
+            return
+        return width, height
 
 
-#for image in images:
-    #img = img_to_matrix(image)
-    #img = flatten_image(img)
-    #data.append(img)
+def load_dataset(img_dir):
+    superclasses = [f for f in os.listdir(img_dir)]
+    images = []
+    labels = []
 
-#data = np.array(data)
+    image_x_y_mean = [0, 0]
+    n_images = 0
+
+    for superclass in superclasses:
+        for subclass in os.listdir(img_dir + superclass):
+            for image in os.listdir(img_dir + superclass + "/" + subclass):
+                size = get_image_size(img_dir + superclass + "/" + subclass + "/" + image)
+                image_x_y_mean = [image_x_y_mean[i] + size[i] for i, p in enumerate(size)]
+                #print("IMAGE: " + superclass + "/" + subclass + "/" + image)
+                #print("MEAN: x - ",  image_x_y_mean[0], ", y - ", image_x_y_mean[1])
+                #print("SIZE: x - ", size[0], ", y - ", size[1])
+                n_images += 1
+                images.append(img_dir + superclass + "/" + subclass + "/" + image)
+                labels.append([superclass + "/" + subclass])
+
+    image_x_y_mean = map(lambda x: x/n_images, image_x_y_mean)
+    print(list(image_x_y_mean))
+    #for image in images:
+        #img = img_to_matrix(image)
+        #img = flatten_image(img)
+        #data.append(img)
+        #data = np.array(data)
+
+
+'''
+def img_to_matrix(filename, verbose=False):
+    """
+    takes a filename and turns it into a numpy array of RGB pixels
+    """
+    img = Image.open(filename)
+    if verbose==True:
+        print "changing size from %s to %s" % (str(img.size), str(STANDARD_SIZE))
+    img = img.resize(STANDARD_SIZE)
+    img = list(img.getdata())
+    img = map(list, img)
+    img = np.array(img)
+    return img
+'''
+
+load_dataset('train/')
+#feature_extraction()
+#
+
 
 '''
 # The data that we are interested in is made of 8x8 images of digits, let's
