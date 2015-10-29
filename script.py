@@ -7,6 +7,9 @@ import imghdr
 import struct
 import math
 from datetime import datetime
+from mpl_toolkits.mplot3d import Axes3D
+import pandas as pd
+
 
 from sklearn import datasets, svm, metrics
 from sklearn.decomposition import RandomizedPCA
@@ -89,7 +92,23 @@ def load_testset(img_dir, percent=1.0):
 
     return np.array(split_list_percent(data, percent))
 
+def render3Dplot(data, labels):
+    pca = RandomizedPCA(n_components=3)
+    X = pca.fit_transform(data)
+    df = pd.DataFrame({"x": X[:, 0], "y": X[:, 1], "z": X[:, 2],"label":labels})
+    uniquelabels = [labels[i] for i in range(len(labels)) if labels[i] != labels[i-1]]
+    N = len(uniquelabels)
+    colors = ["red","Aqua","Aquamarine","Bisque","Black","Blue","BlueViolet","Chartreuse","Chocolate","DarkGreen","DeepPink","yellow"]
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    for label, color in zip(uniquelabels, colors):
+        mask = df.loc[df['label']==label]
+        ax.scatter(mask.x,mask.y, mask.z, c=color, label=label)
+    plt.legend()
+    plt.show()
+
 (data, labels) = load_dataset('train/')
+#render3Dplot(data,labels)
 testdata = load_testset('test/', 0.1)
 pca = RandomizedPCA(n_components=5)
 train_x = pca.fit_transform(data)
@@ -146,4 +165,4 @@ sfmt = "%d"+",%.10f"*(len(classes)-1)
 np.savetxt(f, y_pred, delimiter=",", fmt=sfmt)
 f.close()
 #print("Y_PRED:", np.append(labels ,y_pred))
-#print("Number of mislabeled points out of a total 1 points : %d",(labels != y_pred).sum())
+#print("' of mislabeled points out of a total 1 points : %d",(labels != y_pred).sum())
