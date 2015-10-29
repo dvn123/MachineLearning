@@ -18,10 +18,11 @@ $RECYCLE.BIN/
 *.lnk
 
 # Data Set
-test/*
-train/*
 test/
 train/
+
+# Results
+results/
 
 # =========================
 # Operating System Files

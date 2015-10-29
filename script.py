@@ -6,6 +6,7 @@ import numpy as np
 import imghdr
 import struct
 import math
+from datetime import datetime
 
 from sklearn import datasets, svm, metrics
 from sklearn.decomposition import RandomizedPCA
@@ -34,12 +35,17 @@ def img_to_matrix(filename, size, verbose=False):
     img = np.array(img)
     return img
 
+def split_list_percent(a_list, percent):
+    half = math.floor(len(a_list)*percent)
+    #print(half)
+    return a_list[:half]
+
 def flatten_image(img):
     s = img.shape[0] * img.shape[1]
     img_wide = img.reshape(1, s)
     return img_wide[0]
 
-def load_dataset(img_dir):
+def load_dataset(img_dir, percent=1.0):
     superclasses = [f for f in os.listdir(img_dir)]
     images = []
     labels = []
@@ -57,7 +63,7 @@ def load_dataset(img_dir):
                 #print("SIZE: x - ", size[0], ", y - ", size[1])
                 n_images += 1
                 images.append(img_dir + superclass + "/" + subclass + "/" + image)
-                labels.append([superclass + "/" + subclass])
+                labels.append(superclass + "/" + subclass)
 
     image_x_y_mean = list(map(lambda x: math.floor(x/n_images), image_x_y_mean))
     global IMG_SIZE
@@ -70,30 +76,66 @@ def load_dataset(img_dir):
         img = flatten_image(img)
         data.append(img)
 
-    return (np.array(data), labels)
+    return np.array(split_list_percent(data, percent)), np.transpose(split_list_percent(labels, percent))
 
-def load_testset(img_dir):
+def load_testset(img_dir, percent=1.0):
     images = [img_dir + f for f in os.listdir(img_dir)]
 
-    #setup a standard image size; this will distort some images but will get everything into the same shape
     data = []
     for image in images:
         img = img_to_matrix(image, IMG_SIZE)
         img = flatten_image(img)
         data.append(img)
 
-    return np.array(data)
+    return np.array(split_list_percent(data, percent))
 
 (data, labels) = load_dataset('train/')
-testdata = load_testset('test/')
+testdata = load_testset('test/', 0.1)
 pca = RandomizedPCA(n_components=5)
 train_x = pca.fit_transform(data)
 test_x = pca.transform(testdata)
 
-print("TRAIN_X: ", train_x)
-print("TEST_X: ", test_x)
+#print("TRAIN_X: ", train_x)
+#print("TEST_X: ", test_x)
+#print("LABELS: ", np.array_repr(labels))
 
 gnb = GaussianNB()
-y_pred = gnb.fit(train_x, labels).predict(test_x)
-print("Y_PRED:", y_pred)
-print("Number of mislabeled points out of a total 1 points : %d",(labels != y_pred).sum())
+y_pred = gnb.fit(train_x, labels).predict_proba(test_x)
+
+#print(list(map(lambda x: x.split('/', 1)[-1], gnb.classes_)))
+
+##WRITE
+#np.set_printoptions(threshold=np.inf)
+#y_pred_tmp = np.array([])
+
+#for index, line in enumerate(y_pred):
+    #print(index)
+    #print(line)
+    #print(np.array([index+1]))
+    #y_pred_tmp = np.append(y_pred_tmp, np.append(np.array([index+1]), y_pred))
+    #print(y_pred_tmp)
+    #print(np.append(np.array([index+1]), y_pred))
+
+ind = np.transpose(np.matrix(np.arange(1, len(y_pred) + 1, 1)))
+#print(ind)
+#print(len(ind))
+#print(len(y_pred))
+#print(np.hstack((ind, y_pred)))
+y_pred = np.hstack((ind, y_pred))
+#y_pred = [np.append((np.array([i+1]), p), y_pred) for i, p in enumerate(y_pred)]
+#y_pred = np.array(map(lambda x: np.append((np.array([index+1]), x), y_pred))
+#print(y_pred)
+time_now = (datetime.now()).strftime("%Y.%M.%d_%H.%M.%S.csv")
+f2 = open('results/' + time_now, 'w')
+
+classes = list(map(lambda x: x.split('/', 1)[-1], gnb.classes_))
+classes.insert(0, 'Id')
+print(classes)
+f2.write(','.join(classes) + '\n')
+f2.close()
+#np.savetxt(f, np.array(','.join(gnb.classes_), fmt="%s", delimiter=',', newline='')
+f = open('results/' + str(time_now), 'ab')
+np.savetxt(f, y_pred, delimiter=",", fmt="%s")
+f.close()
+#print("Y_PRED:", np.append(labels ,y_pred))
+#print("Number of mislabeled points out of a total 1 points : %d",(labels != y_pred).sum())
