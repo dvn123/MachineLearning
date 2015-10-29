@@ -126,6 +126,9 @@ y_pred = np.hstack((ind, y_pred))
 #y_pred = np.array(map(lambda x: np.append((np.array([index+1]), x), y_pred))
 #print(y_pred)
 time_now = (datetime.now()).strftime("%Y.%M.%d_%H.%M.%S.csv")
+if not os.path.exists('results'):
+    os.makedirs('results')
+
 f2 = open('results/' + time_now, 'w')
 
 classes = list(map(lambda x: x.split('/', 1)[-1], gnb.classes_))
