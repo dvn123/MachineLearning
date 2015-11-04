@@ -12,6 +12,14 @@ from datetime import datetime
 from sklearn.decomposition import RandomizedPCA
 from sklearn.naive_bayes import GaussianNB
 from sklearn import svm, metrics
+from sklearn import neighbors
+from sklearn.linear_model import Perceptron
+from sklearn import cross_validation
+
+NAIVEBAYES = 1
+SUPPORTVECTORMACHINES = 2
+NEARESTNEIGHBORGS = 3
+PERCEPTRON = 4
 
 def read_settings(file_name='settings.ini'):
     config = configparser.ConfigParser()
@@ -32,6 +40,22 @@ def flatten_image(img):
     s = img.shape[0] * img.shape[1]
     img_wide = img.reshape(1, s)
     return img_wide[0]
+
+
+def render3Dplot(data, labels):
+    pca = RandomizedPCA(n_components=3)
+    X = pca.fit_transform(data)
+    df = pd.DataFrame({"x": X[:, 0], "y": X[:, 1], "z": X[:, 2],"label":labels})
+    uniquelabels = [labels[i] for i in range(len(labels)) if labels[i] != labels[i-1]]
+    N = len(uniquelabels)
+    colors = ["red","Aqua","Aquamarine","Bisque","Black","Blue","BlueViolet","Chartreuse","Chocolate","DarkGreen","DeepPink","yellow"]
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    for label, color in zip(uniquelabels, colors):
+        mask = df.loc[df['label']==label]
+        ax.scatter(mask.x,mask.y, mask.z, c=color, label=label)
+    plt.legend()
+    plt.show()
 
 
 def load_train_set(img_dir, cross_validation=1, percentage=1.0):
@@ -166,16 +190,27 @@ if int(settings['ImageFeatureExtraction']['Algorithm']) == 1:
 predicted_classes = None
 class_probabilities = None
 model = None
-if int(settings['MachineLearningAlgorithm']['Algorithm']) == 1:
+
+if int(settings['MachineLearningAlgorithm']['Algorithm']) == NAIVEBAYES:#1
     gnb = GaussianNB()
     model = gnb.fit(train_data_features, labels)
     predicted_classes = model.predict(test_data_features)
     class_probabilities = model.predict_proba(test_data_features)
-elif int(settings['MachineLearningAlgorithm']['Algorithm']) == 2:
-    model = svm.SVC(gamma=0.001, probability=True)
-    model.fit(train_data_features, labels)
+elif int(settings['MachineLearningAlgorithm']['Algorithm']) == SUPPORTVECTORMACHINES:#2
+    svm = svm.SVC(gamma=0.001, probability=True)
+    model = svm.fit(train_data_features, labels)
     predicted_classes = model.predict(test_data_features)
     class_probabilities = model.predict_proba(test_data_features)
+elif int(settings['MachineLearningAlgorithm']['Algorithm']) == NEARESTNEIGHBORGS:#3
+    clf = neighbors.KNeighborsClassifier(n_neighbors = 2)
+    model = clf.fit(train_data_features, labels)
+    predicted_classes = model.predict(test_data_features)
+    class_probabilities = model.predict_proba(test_data_features)
+elif int(settings['MachineLearningAlgorithm']['Algorithm']) == PERCEPTRON:#4
+    prc = Perceptron()
+    model = prc.fit(train_data_features, labels)
+    predicted_classes = model.predict(test_data_features)
+    class_probabilities = model.score(test_data_features,predicted_classes)
 
 if using_cross_validation:
     print("Number of mislabeled points out of a total", len(labels_validation), "points:", (labels_validation != predicted_classes).sum())
