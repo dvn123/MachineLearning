@@ -128,12 +128,12 @@ y_pred = gnb.fit(train_x, labels).predict_proba(test_x)
 #y_pred_tmp = np.array([])
 
 #for index, line in enumerate(y_pred):
-    #print(index)
-    #print(line)
-    #print(np.array([index+1]))
-    #y_pred_tmp = np.append(y_pred_tmp, np.append(np.array([index+1]), y_pred))
-    #print(y_pred_tmp)
-    #print(np.append(np.array([index+1]), y_pred))
+#print(index)
+#print(line)
+#print(np.array([index+1]))
+#y_pred_tmp = np.append(y_pred_tmp, np.append(np.array([index+1]), y_pred))
+#print(y_pred_tmp)
+#print(np.append(np.array([index+1]), y_pred))
 
 ind = np.transpose(np.matrix(np.arange(1, len(y_pred) + 1, 1)))
 ind = np.array(ind,dtype="int32")
