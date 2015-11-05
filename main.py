@@ -180,7 +180,7 @@ read_settings()
 
 (train_data, validation_data, labels, labels_validation) = load_train_set('train/', cross_validation=int(settings['Data']['CrossValidation']), percentage=float(settings['Data']['TrainPercent']))
 using_cross_validation = False
-using_cross_validation2 = True
+using_cross_validation2 = False
 
 
 if(len(validation_data) == 0):
@@ -198,9 +198,12 @@ if int(settings['ImageFeatureExtraction']['Algorithm']) == 1:
     pca = RandomizedPCA(n_components=int(settings['ImageFeatureExtraction']['NumberFeatures']))
     train_data_features = pca.fit_transform(train_data)
     test_data_features = pca.transform(test_data)
+
 if int(settings['Data']['CrossValidation2']) > 1:
     kf = KFold(len(train_data_features), n_folds=int(settings['Data']['CrossValidation2']))
     using_cross_validation2 = True
+
+print(int(settings['Data']['CrossValidation2']))
 
 predicted_classes = None
 class_probabilities = None
@@ -218,7 +221,6 @@ elif int(settings['MachineLearningAlgorithm']['Algorithm']) == SUPPORTVECTORMACH
     class_probabilities = model.predict_proba(test_data_features)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == NEARESTNEIGHBORGS:#3
     if using_cross_validation2:
-        print("2")
         k_neighbors = 2
         k_neighbors_results = []
         for train, test in kf:
@@ -230,14 +232,12 @@ elif int(settings['MachineLearningAlgorithm']['Algorithm']) == NEARESTNEIGHBORGS
             k_neighbors_results.append((labels[test] != predicted_classes).sum())
             k_neighbors += 1
         k_neighbors = k_neighbors_results.index(min(k_neighbors_results)) + 2
-        print("K_neighbors: ", k_neighbors)
         clf = neighbors.KNeighborsClassifier(k_neighbors)
         model = clf.fit(train_data_features, labels)
-        print(model)
         predicted_classes = model.predict(test_data_features)
         class_probabilities = model.predict_proba(test_data_features)
     else:
-        k_neighbors = 2
+        k_neighbors = 8
         clf = neighbors.KNeighborsClassifier(k_neighbors)
         model = clf.fit(train_data_features, labels)
         predicted_classes = model.predict(test_data_features)
