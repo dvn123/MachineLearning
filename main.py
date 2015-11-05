@@ -248,12 +248,33 @@ elif int(settings['MachineLearningAlgorithm']['Algorithm']) == PERCEPTRON:#4
     predicted_classes = model.predict(test_data_features)
     class_probabilities = model.score(test_data_features,predicted_classes)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == LOGISTICSREGRESSION:#5
-    C = 1
-    p = 'l1'
-    clf_l1_LR = LogisticRegression(C=C, penalty=p, tol=0.01)
-    model = clf_l1_LR.fit(train_data_features, labels)
-    predicted_classes = model.predict(test_data_features)
-    class_probabilities = model.predict_proba(test_data_features)
+    if using_cross_validation2:
+        print("LOGRES")
+        logres_C = 1
+        logres_results = []
+        for train, test in kf:
+            C = logres_C
+            p = 'l1'
+            clf_l1_LR = LogisticRegression(C=C, penalty=p, tol=0.01)
+            model = clf_l1_LR.fit(train_data_features[train], labels[train])
+            predicted_classes = model.predict(train_data_features[test])
+            class_probabilities = model.predict_proba(train_data_features[test])
+            logres_results.append((labels[test] != predicted_classes).sum())
+            logres_C += 1
+        logres_C = logres_results.index(min(logres_results)) + 1
+        print("Log Res C: ", logres_C)
+        clf_l1_LR = LogisticRegression(C=logres_C, penalty=p, tol=0.01)
+        model = clf_l1_LR.fit(train_data_features, labels)
+        predicted_classes = model.predict(test_data_features)
+        class_probabilities = model.predict_proba(test_data_features)
+    else:
+        C = 1
+        p = 'l1'
+        clf_l1_LR = LogisticRegression(C=C, penalty=p, tol=0.01)
+        model = clf_l1_LR.fit(train_data_features, labels)
+        predicted_classes = model.predict(test_data_features)
+        class_probabilities = model.predict_proba(test_data_features)
+
 
 print(labels_validation)
 print(predicted_classes)
