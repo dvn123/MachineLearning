@@ -198,7 +198,7 @@ if int(settings['ImageFeatureExtraction']['Algorithm']) == 1:
     pca = RandomizedPCA(n_components=int(settings['ImageFeatureExtraction']['NumberFeatures']))
     train_data_features = pca.fit_transform(train_data)
     test_data_features = pca.transform(test_data)
-if(int(settings['Data']['CrossValidation2']) > 1)
+if int(settings['Data']['CrossValidation2']) > 1:
     kf = KFold(len(train_data_features), n_folds=int(settings['Data']['CrossValidation2']))
     using_cross_validation2 = True
 
