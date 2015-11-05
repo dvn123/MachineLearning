@@ -1,6 +1,9 @@
 from PIL import Image
 import os
 import math
+
+from sklearn.cross_validation import KFold
+
 import aux_functions
 
 import numpy as np
@@ -192,6 +195,8 @@ if int(settings['ImageFeatureExtraction']['Algorithm']) == 1:
     train_data_features = pca.fit_transform(train_data)
     test_data_features = pca.transform(test_data)
 
+kf = KFold(test_data_features, n_folds=settings['Data']['CrossValidation'])
+
 predicted_classes = None
 class_probabilities = None
 model = None
@@ -207,10 +212,14 @@ elif int(settings['MachineLearningAlgorithm']['Algorithm']) == SUPPORTVECTORMACH
     predicted_classes = model.predict(test_data_features)
     class_probabilities = model.predict_proba(test_data_features)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == NEARESTNEIGHBORGS:#3
-    clf = neighbors.KNeighborsClassifier(n_neighbors = 2)
-    model = clf.fit(train_data_features, labels)
-    predicted_classes = model.predict(test_data_features)
-    class_probabilities = model.predict_proba(test_data_features)
+    k_neighbors = 2
+    k_neighbors_results = []
+    for train, test in kf:
+        clf = neighbors.KNeighborsClassifier(k_neighbors)
+        model = clf.fit(train_data_features, labels)
+        predicted_classes = model.predict(test_data_features)
+        class_probabilities = model.predict_proba(test_data_features)
+        k_neighbors_results.append()
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == PERCEPTRON:#4
     prc = Perceptron()
     model = prc.fit(train_data_features, labels)

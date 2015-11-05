@@ -23,6 +23,7 @@ train/
 
 # Results
 results/
+settings.ini
 
 # =========================
 # Operating System Files
