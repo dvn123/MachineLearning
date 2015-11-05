@@ -22,11 +22,13 @@ from sklearn import svm, metrics
 from sklearn import neighbors
 from sklearn.linear_model import Perceptron
 from sklearn import cross_validation
+from sklearn.linear_model import LogisticRegression
 
 NAIVEBAYES = 1
 SUPPORTVECTORMACHINES = 2
 NEARESTNEIGHBORGS = 3
 PERCEPTRON = 4
+LOGISTICSREGRESSION = 5
 
 
 def read_settings(file_name='settings.ini'):
@@ -225,6 +227,13 @@ elif int(settings['MachineLearningAlgorithm']['Algorithm']) == PERCEPTRON:#4
     model = prc.fit(train_data_features, labels)
     predicted_classes = model.predict(test_data_features)
     class_probabilities = model.score(test_data_features,predicted_classes)
+elif int(settings['MachineLearningAlgorithm']['Algorithm']) == LOGISTICSREGRESSION:#5
+    C = 1
+    p = 'l1'
+    clf_l1_LR = LogisticRegression(C=C, penalty=p, tol=0.01)
+    model = clf_l1_LR.fit(train_data_features, labels)
+    predicted_classes = model.predict(test_data_features)
+    class_probabilities = model.predict_proba(test_data_features)
 
 if using_cross_validation:
     print("Number of mislabeled points out of a total", len(labels_validation), "points:", (labels_validation != predicted_classes).sum())
