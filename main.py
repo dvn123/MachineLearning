@@ -9,6 +9,10 @@ import configparser
 
 from datetime import datetime
 
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import pandas as pd
+
 from sklearn.decomposition import RandomizedPCA
 from sklearn.naive_bayes import GaussianNB
 from sklearn import svm, metrics
@@ -22,6 +26,7 @@ SUPPORTVECTORMACHINES = 2
 NEARESTNEIGHBORGS = 3
 PERCEPTRON = 4
 LOGISTICSREGRESSION = 5
+
 
 def read_settings(file_name='settings.ini'):
     config = configparser.ConfigParser()
@@ -151,7 +156,7 @@ def write(class_probabilities, file_name='results/' + (datetime.now()).strftime(
     ind = np.array(ind,dtype="int32")
 
     class_probabilities = np.hstack((ind, class_probabilities))
-    classes = list(map(lambda x: x.split('/', 1)[-1], gnb.classes_))
+    classes = list(map(lambda x: x.split('/', 1)[-1], model.classes_))
     classes.insert(0, 'Id')
 
     probabilities_format = "%d"+",%.10f"*(len(classes)-1)
