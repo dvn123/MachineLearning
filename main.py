@@ -180,6 +180,8 @@ read_settings()
 
 (train_data, validation_data, labels, labels_validation) = load_train_set('train/', cross_validation=int(settings['Data']['CrossValidation']), percentage=float(settings['Data']['TrainPercent']))
 using_cross_validation = False
+using_cross_validation2 = True
+
 
 if(len(validation_data) == 0):
     test_data = load_test_set('test/', percentage=float(settings['Data']['TestPercent']))
@@ -196,8 +198,9 @@ if int(settings['ImageFeatureExtraction']['Algorithm']) == 1:
     pca = RandomizedPCA(n_components=int(settings['ImageFeatureExtraction']['NumberFeatures']))
     train_data_features = pca.fit_transform(train_data)
     test_data_features = pca.transform(test_data)
-
-kf = KFold(test_data_features, n_folds=settings['Data']['CrossValidation'])
+if(int(settings['Data']['CrossValidation2']) > 1)
+    kf = KFold(len(train_data_features), n_folds=int(settings['Data']['CrossValidation2']))
+    using_cross_validation2 = True
 
 predicted_classes = None
 class_probabilities = None
@@ -214,14 +217,31 @@ elif int(settings['MachineLearningAlgorithm']['Algorithm']) == SUPPORTVECTORMACH
     predicted_classes = model.predict(test_data_features)
     class_probabilities = model.predict_proba(test_data_features)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == NEARESTNEIGHBORGS:#3
-    k_neighbors = 2
-    k_neighbors_results = []
-    for train, test in kf:
+    if using_cross_validation2:
+        print("2")
+        k_neighbors = 2
+        k_neighbors_results = []
+        for train, test in kf:
+            clf = neighbors.KNeighborsClassifier(k_neighbors)
+            model = clf.fit(train_data_features[train], labels[train])
+            predicted_classes = model.predict(train_data_features[test])
+            class_probabilities = model.predict_proba(train_data_features[test])
+            print("K result, i - ", k_neighbors, ", - ", (labels[test] != predicted_classes).sum())
+            k_neighbors_results.append((labels[test] != predicted_classes).sum())
+            k_neighbors += 1
+        k_neighbors = k_neighbors_results.index(min(k_neighbors_results)) + 2
+        print("K_neighbors: ", k_neighbors)
+        clf = neighbors.KNeighborsClassifier(k_neighbors)
+        model = clf.fit(train_data_features, labels)
+        print(model)
+        predicted_classes = model.predict(test_data_features)
+        class_probabilities = model.predict_proba(test_data_features)
+    else:
+        k_neighbors = 2
         clf = neighbors.KNeighborsClassifier(k_neighbors)
         model = clf.fit(train_data_features, labels)
         predicted_classes = model.predict(test_data_features)
         class_probabilities = model.predict_proba(test_data_features)
-        k_neighbors_results.append()
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == PERCEPTRON:#4
     prc = Perceptron()
     model = prc.fit(train_data_features, labels)
@@ -235,8 +255,10 @@ elif int(settings['MachineLearningAlgorithm']['Algorithm']) == LOGISTICSREGRESSI
     predicted_classes = model.predict(test_data_features)
     class_probabilities = model.predict_proba(test_data_features)
 
+print(labels_validation)
+print(predicted_classes)
 if using_cross_validation:
-    print("Number of mislabeled points out of a total", len(labels_validation), "points:", (labels_validation != predicted_classes).sum())
+    print("Number of mislabeled points out of a total ", len(labels_validation), " points: ", (labels_validation != predicted_classes).sum())
     print("Classification report for classifier %s:\n%s\n" % (model, metrics.classification_report(labels_validation, predicted_classes)))
 
 write(class_probabilities)
