@@ -200,7 +200,7 @@ if int(settings['ImageFeatureExtraction']['Algorithm']) == 1:
     test_data_features = pca.transform(test_data)
 
 if int(settings['Data']['CrossValidation2']) > 1:
-    kf = KFold(len(train_data_features), n_folds=int(settings['Data']['CrossValidation2']))
+    kf = KFold(len(train_data_features), n_folds=int(settings['Data']['CrossValidation2']), shuffle=True)
     using_cross_validation2 = True
 
 print(int(settings['Data']['CrossValidation2']))
@@ -221,17 +221,18 @@ elif int(settings['MachineLearningAlgorithm']['Algorithm']) == SUPPORTVECTORMACH
     class_probabilities = model.predict_proba(test_data_features)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == NEARESTNEIGHBORGS:#3
     if using_cross_validation2:
-        k_neighbors = 2
-        k_neighbors_results = []
+        k_neighbors_results = np.zeros(10)
+        #k_neighbors = 2
+        #k_neighbors_results = []
         for train, test in kf:
-            clf = neighbors.KNeighborsClassifier(k_neighbors)
-            model = clf.fit(train_data_features[train], labels[train])
-            predicted_classes = model.predict(train_data_features[test])
-            class_probabilities = model.predict_proba(train_data_features[test])
-            print("K result, i - ", k_neighbors, ", - ", (labels[test] != predicted_classes).sum())
-            k_neighbors_results.append((labels[test] != predicted_classes).sum())
-            k_neighbors += 1
-        k_neighbors = k_neighbors_results.index(min(k_neighbors_results)) + 2
+            for k_neighbors in range(2,10):
+                clf = neighbors.KNeighborsClassifier(k_neighbors)
+                model = clf.fit(train_data_features[train], labels[train])
+                predicted_classes = model.predict(train_data_features[test])
+                class_probabilities = model.predict_proba(train_data_features[test])
+                print("K result, i - ", k_neighbors, ", n points:", len(predicted_classes), ", wrong: ", (labels[test] != predicted_classes).sum(), " sum of errors: ", k_neighbors_results[k_neighbors])
+                k_neighbors_results[k_neighbors] += (labels[test] != predicted_classes).sum()
+        k_neighbors = list(k_neighbors_results).index(min(k_neighbors_results)) + 2
         clf = neighbors.KNeighborsClassifier(k_neighbors)
         model = clf.fit(train_data_features, labels)
         predicted_classes = model.predict(test_data_features)
