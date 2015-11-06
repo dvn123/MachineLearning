@@ -85,55 +85,35 @@ def load_train_set(img_dir, cross_validation=1, percentage=1.0):
                 n_images_validation = math.floor(n_images_to_load/cross_validation)
             else:
                 n_images_validation = 0
-            #print('____')
-            #print(len([f for f in os.listdir(img_dir + superclass + "/" + subclass)if os.path.isfile(os.path.join(img_dir + superclass + "/" + subclass, f))]))
-            #print(n_images_to_load)
-            #print(n_images_validation)
             for image in os.listdir(img_dir + superclass + "/" + subclass):
                 size = aux_functions.get_image_size(img_dir + superclass + "/" + subclass + "/" + image)
                 if n_images > n_images_to_load:
                     break
 
                 if n_images > n_images_to_load-n_images_validation:
-                    #print('2: ', n_images)
                     _images_validation.append(img_dir + superclass + "/" + subclass + "/" + image)
                     _labels_validation.append(superclass + "/" + subclass)
                 else:
-                    #print('1: ', n_images)
                     image_x_y_mean = [image_x_y_mean[i] + size[i] for i, p in enumerate(size)]
                     _images.append(img_dir + superclass + "/" + subclass + "/" + image)
                     _labels.append(superclass + "/" + subclass)
                 n_images += 1
 
-    #print('____266666663')
-    #print(len(_images))
-    #print(len(_images_validation))
-    #print(n_images_to_load)
-    #print(n_images+n_images_validation)
-
     image_x_y_mean = list(map(lambda x: math.floor(x/(len(_images_validation) + len(_images))), image_x_y_mean))
     global IMG_SIZE
     IMG_SIZE = image_x_y_mean
 
-    #print('rrrr28888244')
-    #print(IMG_SIZE)
     data = []
     data_validation = []
     for image in _images:
-        #print(image)
         img = img_to_matrix(image, IMG_SIZE)
-        #print(IMG_SIZE)
         img = flatten_image(img)
         data.append(img)
-
-    #print('2278755644')
 
     for image2 in _images_validation:
         img2 = img_to_matrix(image2, IMG_SIZE)
         img2 = flatten_image(img2)
         data_validation.append(img2)
-    #m.close()
-    #print('2249999994')
 
     return np.array(data), np.array(data_validation), np.transpose(np.array(_labels)), np.transpose(np.array(_labels_validation))
 
@@ -143,7 +123,6 @@ def load_test_set(img_dir, percentage=1.0):
     data = []
     n_images = 0
     n_images_to_load = math.floor(float(settings['Data']['NImagesTest']) * percentage)
-    print(n_images_to_load)
     for image in images:
         if n_images > n_images_to_load:
             break
@@ -178,22 +157,21 @@ def write(class_probabilities, file_name='results/' + (datetime.now()).strftime(
 settings = None
 read_settings()
 
-(train_data, validation_data, labels, labels_validation) = load_train_set('train/', cross_validation=int(settings['Data']['CrossValidation']), percentage=float(settings['Data']['TrainPercent']))
+(train_data, validation_data, labels, labels_validation) = load_train_set('train/', cross_validation=1, percentage=float(settings['Data']['TrainPercent']))
 using_cross_validation = False
 using_cross_validation2 = False
 
 
 if(len(validation_data) == 0):
     test_data = load_test_set('test/', percentage=float(settings['Data']['TestPercent']))
-    print(float(settings['Data']['TestPercent']))
-    print(len(test_data))
 else:
-    using_cross_validation = True
+    using_cross_validation = False
     test_data = validation_data
 
 train_data_features = None
 test_data_features = None
 
+#Choose Image algorithm (Chosen in settings.ini)
 if int(settings['ImageFeatureExtraction']['Algorithm']) == 1:
     pca = RandomizedPCA(n_components=int(settings['ImageFeatureExtraction']['NumberFeatures']))
     train_data_features = pca.fit_transform(train_data)
@@ -203,12 +181,11 @@ if int(settings['Data']['CrossValidation2']) > 1:
     kf = KFold(len(train_data_features), n_folds=int(settings['Data']['CrossValidation2']), shuffle=True)
     using_cross_validation2 = True
 
-print(int(settings['Data']['CrossValidation2']))
-
 predicted_classes = None
 class_probabilities = None
 model = None
 
+#Choose ML algorithm (Chosen in settings.ini)
 if int(settings['MachineLearningAlgorithm']['Algorithm']) == NAIVEBAYES:#1
     gnb = GaussianNB()
     model = gnb.fit(train_data_features, labels)
@@ -230,7 +207,7 @@ elif int(settings['MachineLearningAlgorithm']['Algorithm']) == NEARESTNEIGHBORGS
                 model = clf.fit(train_data_features[train], labels[train])
                 predicted_classes = model.predict(train_data_features[test])
                 class_probabilities = model.predict_proba(train_data_features[test])
-                print("K result, i - ", k_neighbors, ", n points:", len(predicted_classes), ", wrong: ", (labels[test] != predicted_classes).sum(), " sum of errors: ", k_neighbors_results[k_neighbors])
+                #print("K result, i - ", k_neighbors, ", n points:", len(predicted_classes), ", wrong: ", (labels[test] != predicted_classes).sum(), " sum of errors: ", k_neighbors_results[k_neighbors])
                 k_neighbors_results[k_neighbors] += (labels[test] != predicted_classes).sum()
         k_neighbors = list(k_neighbors_results).index(min(k_neighbors_results)) + 2
         clf = neighbors.KNeighborsClassifier(k_neighbors)
@@ -250,7 +227,7 @@ elif int(settings['MachineLearningAlgorithm']['Algorithm']) == PERCEPTRON:#4
     class_probabilities = model.score(test_data_features,predicted_classes)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == LOGISTICSREGRESSION:#5
     if using_cross_validation2:
-        print("LOGRES")
+        #print("LOGRES")
         logres_C = 1
         logres_results = []
         for train, test in kf:
@@ -263,7 +240,7 @@ elif int(settings['MachineLearningAlgorithm']['Algorithm']) == LOGISTICSREGRESSI
             logres_results.append((labels[test] != predicted_classes).sum())
             logres_C += 1
         logres_C = logres_results.index(min(logres_results)) + 1
-        print("Log Res C: ", logres_C)
+        #print("Log Res C: ", logres_C)
         clf_l1_LR = LogisticRegression(C=logres_C, penalty=p, tol=0.01)
         model = clf_l1_LR.fit(train_data_features, labels)
         predicted_classes = model.predict(test_data_features)
@@ -277,8 +254,8 @@ elif int(settings['MachineLearningAlgorithm']['Algorithm']) == LOGISTICSREGRESSI
         class_probabilities = model.predict_proba(test_data_features)
 
 
-print(labels_validation)
-print(predicted_classes)
+#print(labels_validation)
+#print(predicted_classes)
 if using_cross_validation:
     print("Number of mislabeled points out of a total ", len(labels_validation), " points: ", (labels_validation != predicted_classes).sum())
     print("Classification report for classifier %s:\n%s\n" % (model, metrics.classification_report(labels_validation, predicted_classes)))
