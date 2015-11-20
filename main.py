@@ -9,6 +9,8 @@ import aux_functions
 import numpy as np
 
 import configparser
+import cv2
+
 
 from datetime import datetime
 
@@ -176,6 +178,13 @@ if int(settings['ImageFeatureExtraction']['Algorithm']) == 1:
     pca = RandomizedPCA(n_components=int(settings['ImageFeatureExtraction']['NumberFeatures']))
     train_data_features = pca.fit_transform(train_data)
     test_data_features = pca.transform(test_data)
+elif int(settings['ImageFeatureExtraction']['Algorithm']) == 2:
+    surf = cv2.xfeatures2d.SURF_create()
+    sd = cv2.FeatureDetector_create("SURF")
+    (kps, descs) = surf.detectAndCompute(gray, None)
+    kp,des = surf.compute(img, keypoints)
+    model = svm.SVC()
+    model.fit(des,['type1'])
 
 if int(settings['Data']['CrossValidation2']) > 1:
     kf = KFold(len(train_data_features), n_folds=int(settings['Data']['CrossValidation2']), shuffle=True)
