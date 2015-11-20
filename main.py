@@ -78,7 +78,9 @@ def load_train_set(img_dir, cross_validation=1, percentage=1.0):
     image_x_y_mean = [0, 0]
 
     for superclass in _superclasses:
+        if(superclass == ".DS_Store"): continue
         for subclass in os.listdir(img_dir + superclass):
+            if(subclass == ".DS_Store"): continue
             n_images = 0
             n_images_to_load = math.ceil(len([f for f in os.listdir(img_dir + superclass + "/" + subclass) if os.path.isfile(os.path.join(img_dir + superclass + "/" + subclass, f))]) * percentage)
             if cross_validation > 1:
