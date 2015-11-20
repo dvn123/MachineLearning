@@ -203,10 +203,22 @@ if int(settings['MachineLearningAlgorithm']['Algorithm']) == NAIVEBAYES:#1
     predicted_classes = model.predict(test_data_features)
     class_probabilities = model.predict_proba(test_data_features)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == SUPPORTVECTORMACHINES:#2
-    svm = svm.SVC(gamma=0.001, probability=True)
-    model = svm.fit(train_data_features, labels)
-    predicted_classes = model.predict(test_data_features)
-    class_probabilities = model.predict_proba(test_data_features)
+    if using_cross_validation2:
+        svm_results = np.zeros(10)
+        #k_neighbors = 2
+        #k_neighbors_results = []
+        for train, test in kf:
+            _svm = svm.SVC(probability=True, kernel='sigmoid')
+            model = _svm.fit(train_data_features[train], labels[train])
+            predicted_classes = model.predict(train_data_features[test])
+            class_probabilities = model.predict_proba(train_data_features[test])
+            print("n points:", len(predicted_classes), ", wrong: ", (labels[test] != predicted_classes).sum(), " sum of errors: ", svm_results[0])
+            svm_results[0] += (labels[test] != predicted_classes).sum()
+        k_neighbors = list(svm_results).index(min(svm_results)) + 2
+        _svm = svm.SVC(probability=True)
+        model = _svm.fit(train_data_features, labels)
+        predicted_classes = model.predict(test_data_features)
+        class_probabilities = model.predict_proba(test_data_features)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == NEARESTNEIGHBORGS:#3
     if using_cross_validation2:
         k_neighbors_results = np.zeros(10)
@@ -268,7 +280,9 @@ elif int(settings['MachineLearningAlgorithm']['Algorithm']) == LOGISTICSREGRESSI
 #print(labels_validation)
 #print(predicted_classes)
 if using_cross_validation:
-    print("Number of mislabeled points out of a total ", len(labels_validation), " points: ", (labels_validation != predicted_classes).sum())
+    #print("Number of mislabeled points out of a total ", len(labels_validation), " points: ", (labels_validation != predicted_classes).sum())
+    #print("Classification report for classifier %s:\n%s\n"      % (classifier, metrics.classification_report(expected, predicted)))
+    print("Confusion matrix:\n%s" % metrics.confusion_matrix(labels_validation, predicted_classes))
     print("Classification report for classifier %s:\n%s\n" % (model, metrics.classification_report(labels_validation, predicted_classes)))
 
 write(class_probabilities)
