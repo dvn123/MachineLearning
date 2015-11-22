@@ -25,6 +25,7 @@ from sklearn import neighbors
 from sklearn.linear_model import Perceptron
 from sklearn import cross_validation
 from sklearn.linear_model import LogisticRegression
+from sklearn.feature_extraction import image
 
 NAIVEBAYES = 1
 SUPPORTVECTORMACHINES = 2
@@ -185,6 +186,21 @@ elif int(settings['ImageFeatureExtraction']['Algorithm']) == 2:
     kp,des = surf.compute(img, keypoints)
     model = svm.SVC()
     model.fit(des,['type1'])
+elif int(settings['ImageFeatureExtraction']['Algorithm']) == 3:
+    sift = cv2.SIFT()
+    train_data_features = sift.detect(train_data)
+    test_data_features = sift.detect(test_data)
+elif int(settings['ImageFeatureExtraction']['Algorithm']) == 4:
+    train_X = np.reshape(train_data, (-1, 1))
+    test_X = np.reshape(test_data, (-1, 1))
+    train_connectivity = image.grid_to_graph(train_data);
+    test_connectivity = image.grid_to_graph(test_data);
+    n_clusters = 5  # number of regions
+    train_data_features = image.AgglomerativeClustering(n_clusters=n_clusters,
+                               linkage='ward', connectivity=train_connectivity).fit(train_X)
+    test_data_features = image.AgglomerativeClustering(n_clusters=n_clusters,
+                                               linkage='ward', connectivity=test_connectivity).fit(test_X)
+
 
 if int(settings['Data']['CrossValidation2']) > 1:
     kf = KFold(len(train_data_features), n_folds=int(settings['Data']['CrossValidation2']), shuffle=True)
