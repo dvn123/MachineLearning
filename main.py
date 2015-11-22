@@ -191,15 +191,19 @@ elif int(settings['ImageFeatureExtraction']['Algorithm']) == 3:
     train_data_features = sift.detect(train_data)
     test_data_features = sift.detect(test_data)
 elif int(settings['ImageFeatureExtraction']['Algorithm']) == 4:
-    train_X = np.reshape(train_data, (-1, 1))
-    test_X = np.reshape(test_data, (-1, 1))
-    train_connectivity = image.grid_to_graph(train_data);
-    test_connectivity = image.grid_to_graph(test_data);
     n_clusters = 5  # number of regions
-    train_data_features = image.AgglomerativeClustering(n_clusters=n_clusters,
-                               linkage='ward', connectivity=train_connectivity).fit(train_X)
-    test_data_features = image.AgglomerativeClustering(n_clusters=n_clusters,
-                                               linkage='ward', connectivity=test_connectivity).fit(test_X)
+    # for img in train_data
+        # X = np.reshape(value, (-1, 1) )
+        #connectivity = image.grid_to_graph(*img.shape);
+        #feature = image.AgglomerativeClustering(n_clusters=n_clusters,
+        #                                      linkage='ward', connectivity=connectivity).fit(X)
+        # train_data_features.append(feature)
+    #for img in test_data
+    #    X = np.reshape(img, (-1, 1) )
+    #   connectivity = image.grid_to_graph(*img.shape);
+    #   feature = image.AgglomerativeClustering(n_clusters=n_clusters,
+    #                                           linkage='ward', connectivity=connectivity).fit(X)
+    #   test_data_features.append(feature)
 
 
 if int(settings['Data']['CrossValidation2']) > 1:
