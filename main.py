@@ -26,11 +26,18 @@ from sklearn.linear_model import Perceptron
 from sklearn import cross_validation
 from sklearn.linear_model import LogisticRegression
 from sklearn.feature_extraction import image
+from sklearn.cross_validation import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.datasets import make_moons, make_circles, make_classification
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.datasets import load_iris
-from sklearn.ensemble import AdaBoostClassifier
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 
+CROSSTEST = 0
 NAIVEBAYES = 1
 SUPPORTVECTORMACHINES = 2
 NEARESTNEIGHBORGS = 3
@@ -38,6 +45,7 @@ PERCEPTRON = 4
 LOGISTICSREGRESSION = 5
 DECISIONTREE = 6
 ADABOOST = 7
+
 
 
 def read_settings(file_name='settings.ini'):
@@ -369,7 +377,46 @@ elif int(settings['MachineLearningAlgorithm']['Algorithm']) == ADABOOST:#7
         model = clf.fit(train_data_features, labels)
         predicted_classes = model.predict(test_data_features)
         class_probabilities = model.predict_proba(test_data_features)
+elif int(settings['MachineLearningAlgorithm']['Algorithm']) == CROSSTEST:#0
+    if using_cross_validation2:
 
+        _results = []
+        global_results = []
+
+        names = ["Nearest Neighbors", "Linear SVM", "RBF SVM", "Decision Tree",
+         "Random Forest", "AdaBoost", "Naive Bayes", "Linear Discriminant Analysis",
+         "Quadratic Discriminant Analysis"]
+        classifiers = [
+            KNeighborsClassifier(3),
+            SVC(kernel="linear", C=0.025, probability=True),
+            SVC(gamma=2, C=1, probability=True),
+            DecisionTreeClassifier(max_depth=5),
+            RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),
+            AdaBoostClassifier(),
+            GaussianNB(),
+            LinearDiscriminantAnalysis(),
+            QuadraticDiscriminantAnalysis()]
+
+        for name, clf in zip(names, classifiers):
+            for train, test in kf:
+                model = clf.fit(train_data_features[train], labels[train])
+                predicted_classes = model.predict(train_data_features[test])
+                class_probabilities = model.predict_proba(train_data_features[test])
+                print(name," n points:", len(predicted_classes), ", wrong: ", (labels[test] != predicted_classes).sum(), " percentage: ",(labels[test] != predicted_classes).sum()*100/len(predicted_classes),"%")
+                _results.append((labels[test] != predicted_classes).sum())
+            result = min(_results)
+            global_results.append((name,result))
+        print(global_results)
+
+        clf = AdaBoostClassifier()
+        model = clf.fit(train_data_features, labels)
+        predicted_classes = model.predict(test_data_features)
+        class_probabilities = model.predict_proba(test_data_features)
+    else:
+        clf = AdaBoostClassifier()
+        model = clf.fit(train_data_features, labels)
+        predicted_classes = model.predict(test_data_features)
+        class_probabilities = model.predict_proba(test_data_features)
 
 #print(labels_validation)
 #print(predicted_classes)
