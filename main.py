@@ -14,9 +14,9 @@ import cv2
 
 from datetime import datetime
 
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-import pandas as pd
+#import matplotlib.pyplot as plt
+#from mpl_toolkits.mplot3d import Axes3D
+#import pandas as pd
 
 from sklearn.decomposition import RandomizedPCA
 from sklearn.naive_bayes import GaussianNB
@@ -26,12 +26,17 @@ from sklearn.linear_model import Perceptron
 from sklearn import cross_validation
 from sklearn.linear_model import LogisticRegression
 from sklearn.feature_extraction import image
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.datasets import load_iris
+from sklearn.ensemble import AdaBoostClassifier
 
 NAIVEBAYES = 1
 SUPPORTVECTORMACHINES = 2
 NEARESTNEIGHBORGS = 3
 PERCEPTRON = 4
 LOGISTICSREGRESSION = 5
+DECISIONTREE = 6
+ADABOOST = 7
 
 
 def read_settings(file_name='settings.ini'):
@@ -55,7 +60,7 @@ def flatten_image(img):
     return img_wide[0]
 
 
-def render3Dplot(data, labels):
+'''def render3Dplot(data, labels):
     pca = RandomizedPCA(n_components=3)
     X = pca.fit_transform(data)
     df = pd.DataFrame({"x": X[:, 0], "y": X[:, 1], "z": X[:, 2],"label":labels})
@@ -68,7 +73,7 @@ def render3Dplot(data, labels):
         mask = df.loc[df['label']==label]
         ax.scatter(mask.x,mask.y, mask.z, c=color, label=label)
     plt.legend()
-    plt.show()
+    plt.show()'''
 
 
 def load_train_set(img_dir, cross_validation=1, percentage=1.0):
@@ -184,10 +189,10 @@ if int(settings['ImageFeatureExtraction']['Algorithm']) == 1:
 elif int(settings['ImageFeatureExtraction']['Algorithm']) == 2:
     surf = cv2.xfeatures2d.SURF_create()
     sd = cv2.FeatureDetector_create("SURF")
-    (kps, descs) = surf.detectAndCompute(gray, None)
-    kp,des = surf.compute(img, keypoints)
+    #diogo(kps, descs) = surf.detectAndCompute(gray, None)
+    #diogokp,des = surf.compute(img, keypoints)
     model = svm.SVC()
-    model.fit(des,['type1'])
+    #diogomodel.fit(des,['type1'])
 elif int(settings['ImageFeatureExtraction']['Algorithm']) == 3:
     sift = cv2.SIFT()
     train_data_features = sift.detect(train_data)
@@ -250,7 +255,7 @@ elif int(settings['MachineLearningAlgorithm']['Algorithm']) == NEARESTNEIGHBORGS
                 model = clf.fit(train_data_features[train], labels[train])
                 predicted_classes = model.predict(train_data_features[test])
                 class_probabilities = model.predict_proba(train_data_features[test])
-                #print("K result, i - ", k_neighbors, ", n points:", len(predicted_classes), ", wrong: ", (labels[test] != predicted_classes).sum(), " sum of errors: ", k_neighbors_results[k_neighbors])
+                print("K result, i - ", k_neighbors, ", n points:", len(predicted_classes), ", wrong: ", (labels[test] != predicted_classes).sum(), " sum of errors: ", k_neighbors_results[k_neighbors])
                 k_neighbors_results[k_neighbors] += (labels[test] != predicted_classes).sum()
         k_neighbors = list(k_neighbors_results).index(min(k_neighbors_results)) + 2
         clf = neighbors.KNeighborsClassifier(k_neighbors)
@@ -293,6 +298,52 @@ elif int(settings['MachineLearningAlgorithm']['Algorithm']) == LOGISTICSREGRESSI
         p = 'l1'
         clf_l1_LR = LogisticRegression(C=C, penalty=p, tol=0.01)
         model = clf_l1_LR.fit(train_data_features, labels)
+        predicted_classes = model.predict(test_data_features)
+        class_probabilities = model.predict_proba(test_data_features)
+elif int(settings['MachineLearningAlgorithm']['Algorithm']) == DECISIONTREE:#6
+    if using_cross_validation2:
+        _results = np.zeros(10)
+        for train, test in kf:
+            clf = DecisionTreeClassifier()
+            model = clf.fit(train_data_features[train], labels[train])
+            predicted_classes = model.predict(train_data_features[test])
+            class_probabilities = model.predict_proba(train_data_features[test])
+            print(" n points:", len(predicted_classes), ", wrong: ", (labels[test] != predicted_classes).sum(), " percentage: ",(labels[test] != predicted_classes).sum()*100/len(predicted_classes),"%"," sum of errors: ", _results[0])
+            _results[0] += (labels[test] != predicted_classes).sum()
+        clf = DecisionTreeClassifier()
+        model = clf.fit(train_data_features, labels)
+        predicted_classes = model.predict(test_data_features)
+        class_probabilities = model.predict_proba(test_data_features)
+    else:
+        clf = DecisionTreeClassifier()
+        model = clf.fit(train_data_features, labels)
+        predicted_classes = model.predict(test_data_features)
+        class_probabilities = model.predict_proba(test_data_features)
+elif int(settings['MachineLearningAlgorithm']['Algorithm']) == ADABOOST:#7
+    if using_cross_validation2:
+        _results = np.zeros(10)
+        base_n_estimators = 50 # week learners
+        step_n_estimators = 10
+        ada_results = []
+        n_estimators = base_n_estimators
+        for train, test in kf:
+            clf = AdaBoostClassifier(n_estimators = n_estimators)
+            model = clf.fit(train_data_features[train], labels[train])
+            predicted_classes = model.predict(train_data_features[test])
+            class_probabilities = model.predict_proba(train_data_features[test])
+            print("ada week learners: ", n_estimators ," n points:", len(predicted_classes), ", wrong: ", (labels[test] != predicted_classes).sum(), " percentage: ",(labels[test] != predicted_classes).sum()*100/len(predicted_classes),"%"," sum of errors: ", _results[0])
+            _results[0] += (labels[test] != predicted_classes).sum()
+            ada_results.append((labels[test] != predicted_classes).sum())
+            n_estimators += step_n_estimators
+        n_estimators = base_n_estimators + step_n_estimators * ada_results.index(min(ada_results))
+        print("optimized week learners ", n_estimators)
+        clf = AdaBoostClassifier(n_estimators = n_estimators)
+        model = clf.fit(train_data_features, labels)
+        predicted_classes = model.predict(test_data_features)
+        class_probabilities = model.predict_proba(test_data_features)
+    else:
+        clf = AdaBoostClassifier()
+        model = clf.fit(train_data_features, labels)
         predicted_classes = model.predict(test_data_features)
         class_probabilities = model.predict_proba(test_data_features)
 
