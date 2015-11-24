@@ -43,6 +43,7 @@ from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 #from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 #from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
+import sys
 
 CROSSTEST = 0
 NAIVEBAYES = 1
@@ -195,8 +196,8 @@ else:
     using_cross_validation = False
     test_data_images = train_data_split_images
 
-train_data_features = None
-test_data_features = None
+train_data_features = []
+test_data_features = []
 
 
 train_data = []
@@ -225,22 +226,23 @@ if int(settings['ImageFeatureExtraction']['Algorithm']) == 1:
 elif int(settings['ImageFeatureExtraction']['Algorithm']) == 2:
     for image in train_data_images:
         img =  cv2.imread(image)
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         train_data.append(gray)
 
     for image in train_data_split_images:
         img =  cv2.imread(image)
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         train_data_split_crossfold.append(gray)
 
     for image in test_data_images:
         img =  cv2.imread(image)
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         test_data.append(gray)
 
     sift = cv2.xfeatures2d.SIFT_create()
     for image in train_data:
         (kps, descs) = sift.detectAndCompute(image, None)
+        print("# kps: {}, descriptors: {}".format(len(kps), descs.shape))
         train_data_features.append(descs)
 
     for image in train_data_split_crossfold:
@@ -250,8 +252,9 @@ elif int(settings['ImageFeatureExtraction']['Algorithm']) == 2:
     for image in test_data:
         (kps, descs) = sift.detectAndCompute(image, None)
         test_data_features.append(descs)
+    sys.exit(0)
 
-    print("# kps: {}, descriptors: {}".format(len(kps), descs.shape))
+
     #surf = cv2.xfeatures2d.SURF_create()
     #(kps, descs) = surf.detectAndCompute(gray, None)
     print("# kps: {}, descriptors: {}".format(len(kps), descs.shape))
