@@ -45,16 +45,19 @@ from sklearn.naive_bayes import GaussianNB
 #from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 import sys
 
-CROSSTEST = 0
-NAIVEBAYES = 1
-SUPPORTVECTORMACHINES = 2
-NEARESTNEIGHBORGS = 3
+CROSS_TEST = 0
+NAIVE_BAYES = 1
+SUPPORT_VECTOR_MACHINES = 2
+K_NEAREST_NEIGHBORGS = 3
 PERCEPTRON = 4
-LOGISTICSREGRESSION = 5
-DECISIONTREE = 6
+LOGISTICS_REGRESSION = 5
+DECISION_TREE = 6
 ADABOOST = 7
 
-
+RANDOMIZED_PCA = 1
+SIFT = 2
+SURF = 3
+HISTOGRAM_OF_GRADIENTS = 4
 
 def read_settings(file_name='settings.ini'):
     config = configparser.ConfigParser()
@@ -204,7 +207,7 @@ train_data = []
 train_data_split_crossfold = []
 test_data = []
 #Choose Image algorithm (Chosen in settings.ini)
-if int(settings['ImageFeatureExtraction']['Algorithm']) == 1:
+if int(settings['ImageFeatureExtraction']['Algorithm']) == RANDOMIZED_PCA:
     for image in train_data_images:
         img = img_to_matrix(image, IMG_SIZE)
         img = flatten_image(img)
@@ -223,7 +226,7 @@ if int(settings['ImageFeatureExtraction']['Algorithm']) == 1:
     pca = RandomizedPCA(n_components=int(settings['ImageFeatureExtraction']['NumberFeatures']))
     train_data_features = pca.fit_transform(train_data)
     test_data_features = pca.transform(test_data)
-elif int(settings['ImageFeatureExtraction']['Algorithm']) == 2:
+elif int(settings['ImageFeatureExtraction']['Algorithm']) == SIFT:
     for image in train_data_images:
         img =  cv2.imread(image)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -242,7 +245,7 @@ elif int(settings['ImageFeatureExtraction']['Algorithm']) == 2:
     sift = cv2.xfeatures2d.SIFT_create()
     for image in train_data:
         (kps, descs) = sift.detectAndCompute(image, None)
-        print("# kps: {}, descriptors: {}".format(len(kps), descs.shape))
+        #print("# kps: {}, descriptors: {}".format(len(kps), descs.shape))
         train_data_features.append(descs)
 
     for image in train_data_split_crossfold:
@@ -264,7 +267,7 @@ elif int(settings['ImageFeatureExtraction']['Algorithm']) == 2:
     #diogokp,des = surf.compute(img, keypoints)
     #model = svm.SVC()
     #diogomodel.fit(des,['type1'])
-elif int(settings['ImageFeatureExtraction']['Algorithm']) == 3:
+elif int(settings['ImageFeatureExtraction']['Algorithm']) == SURF:
     print(3)
     #sift = cv2.SIFT()
     #train_data_features = sift.detect(train_data)
@@ -294,12 +297,12 @@ class_probabilities = None
 model = None
 
 #Choose ML algorithm (Chosen in settings.ini)
-if int(settings['MachineLearningAlgorithm']['Algorithm']) == NAIVEBAYES:#1
+if int(settings['MachineLearningAlgorithm']['Algorithm']) == NAIVE_BAYES:#1
     gnb = GaussianNB()
     model = gnb.fit(train_data_features, labels)
     predicted_classes = model.predict(test_data_features)
     class_probabilities = model.predict_proba(test_data_features)
-elif int(settings['MachineLearningAlgorithm']['Algorithm']) == SUPPORTVECTORMACHINES:#2
+elif int(settings['MachineLearningAlgorithm']['Algorithm']) == SUPPORT_VECTOR_MACHINES:#2
     if using_cross_validation2:
         svm_results = np.zeros(10)
         #k_neighbors = 2
@@ -316,7 +319,7 @@ elif int(settings['MachineLearningAlgorithm']['Algorithm']) == SUPPORTVECTORMACH
         model = _svm.fit(train_data_features, labels)
         predicted_classes = model.predict(test_data_features)
         class_probabilities = model.predict_proba(test_data_features)
-elif int(settings['MachineLearningAlgorithm']['Algorithm']) == NEARESTNEIGHBORGS:#3
+elif int(settings['MachineLearningAlgorithm']['Algorithm']) == K_NEAREST_NEIGHBORGS:#3
     if using_cross_validation2:
         k_neighbors_results = np.zeros(10)
         #k_neighbors = 1
@@ -346,7 +349,7 @@ elif int(settings['MachineLearningAlgorithm']['Algorithm']) == PERCEPTRON:#4
     model = prc.fit(train_data_features, labels)
     predicted_classes = model.predict(test_data_features)
     class_probabilities = model.score(test_data_features,predicted_classes)
-elif int(settings['MachineLearningAlgorithm']['Algorithm']) == LOGISTICSREGRESSION:#5
+elif int(settings['MachineLearningAlgorithm']['Algorithm']) == LOGISTICS_REGRESSION:#5
     if using_cross_validation2:
         #print("LOGRES")
         logres_C = 1
@@ -374,7 +377,7 @@ elif int(settings['MachineLearningAlgorithm']['Algorithm']) == LOGISTICSREGRESSI
         model = clf_l1_LR.fit(train_data_features, labels)
         predicted_classes = model.predict(test_data_features)
         class_probabilities = model.predict_proba(test_data_features)
-elif int(settings['MachineLearningAlgorithm']['Algorithm']) == DECISIONTREE:#6
+elif int(settings['MachineLearningAlgorithm']['Algorithm']) == DECISION_TREE:#6
     if using_cross_validation2:
         _results = []
         base_max_depth = 6
@@ -440,7 +443,7 @@ elif int(settings['MachineLearningAlgorithm']['Algorithm']) == ADABOOST:#7
         model = clf.fit(train_data_features, labels)
         predicted_classes = model.predict(test_data_features)
         class_probabilities = model.predict_proba(test_data_features)
-elif int(settings['MachineLearningAlgorithm']['Algorithm']) == CROSSTEST:#0
+elif int(settings['MachineLearningAlgorithm']['Algorithm']) == CROSS_TEST:#0
     if using_cross_validation2:
 
         _results = []
