@@ -14,6 +14,13 @@ import cv2
 
 from datetime import datetime
 
+from skimage.feature import hog
+from skimage import data, color, exposure
+
+
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import pandas as pd
 #import matplotlib.pyplot as plt
 #from mpl_toolkits.mplot3d import Axes3D
 #import pandas as pd
@@ -34,8 +41,8 @@ from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
+#from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+#from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 
 CROSSTEST = 0
 NAIVEBAYES = 1
@@ -122,19 +129,19 @@ def load_train_set(img_dir, cross_validation=1, percentage=1.0):
     global IMG_SIZE
     IMG_SIZE = image_x_y_mean
 
-    data = []
-    data_validation = []
-    for image in _images:
-        img = img_to_matrix(image, IMG_SIZE)
-        img = flatten_image(img)
-        data.append(img)
+    #data = []
+    #data_validation = []
+    #for image in _images:
+        #img = img_to_matrix(image, IMG_SIZE)
+        #img = flatten_image(img)
+        #data.append(img)
 
-    for image2 in _images_validation:
-        img2 = img_to_matrix(image2, IMG_SIZE)
-        img2 = flatten_image(img2)
-        data_validation.append(img2)
+    #for image2 in _images_validation:
+        #img2 = img_to_matrix(image2, IMG_SIZE)
+        #img2 = flatten_image(img2)
+        #data_validation.append(img2)
 
-    return np.array(data), np.array(data_validation), np.transpose(np.array(_labels)), np.transpose(np.array(_labels_validation))
+    return np.array(_images), np.array(_images_validation), np.transpose(np.array(_labels)), np.transpose(np.array(_labels_validation))
 
 
 def load_test_set(img_dir, percentage=1.0):
@@ -143,11 +150,11 @@ def load_test_set(img_dir, percentage=1.0):
     n_images = 0
     n_images_to_load = math.floor(float(settings['Data']['NImagesTest']) * percentage)
     for image in images:
-        if n_images > n_images_to_load:
-            break
-        img = img_to_matrix(image, IMG_SIZE)
-        img = flatten_image(img)
-        data.append(img)
+        #if n_images > n_images_to_load:
+            #break
+        #img = img_to_matrix(image, IMG_SIZE)
+        #img = flatten_image(img)
+        data.append(image)
         n_images += 1
     return np.array(data)
 
@@ -176,36 +183,89 @@ def write(class_probabilities, file_name='results/' + (datetime.now()).strftime(
 settings = None
 read_settings()
 
-(train_data, validation_data, labels, labels_validation) = load_train_set('train/', cross_validation=1, percentage=float(settings['Data']['TrainPercent']))
+(train_data_images, train_data_split_images, labels, labels_validation) = load_train_set('train/', cross_validation=1, percentage=float(settings['Data']['TrainPercent']))
+
 using_cross_validation = False
 using_cross_validation2 = False
 
 
-if(len(validation_data) == 0):
-    test_data = load_test_set('test/', percentage=float(settings['Data']['TestPercent']))
+if(len(train_data_split_images) == 0):
+    test_data_images = load_test_set('test/', percentage=float(settings['Data']['TestPercent']))
 else:
     using_cross_validation = False
-    test_data = validation_data
+    test_data_images = train_data_split_images
 
 train_data_features = None
 test_data_features = None
 
+
+train_data = []
+train_data_split_crossfold = []
+test_data = []
 #Choose Image algorithm (Chosen in settings.ini)
 if int(settings['ImageFeatureExtraction']['Algorithm']) == 1:
+    for image in train_data_images:
+        img = img_to_matrix(image, IMG_SIZE)
+        img = flatten_image(img)
+        train_data.append(img)
+
+    for image in train_data_split_images:
+        img = img_to_matrix(image, IMG_SIZE)
+        img = flatten_image(img)
+        train_data_split_crossfold.append(img)
+
+    for image in test_data_images:
+        img = img_to_matrix(image, IMG_SIZE)
+        img = flatten_image(img)
+        test_data.append(img)
+
     pca = RandomizedPCA(n_components=int(settings['ImageFeatureExtraction']['NumberFeatures']))
     train_data_features = pca.fit_transform(train_data)
     test_data_features = pca.transform(test_data)
 elif int(settings['ImageFeatureExtraction']['Algorithm']) == 2:
-    surf = cv2.xfeatures2d.SURF_create()
-    sd = cv2.FeatureDetector_create("SURF")
-    #diogo(kps, descs) = surf.detectAndCompute(gray, None)
+    for image in train_data_images:
+        img =  cv2.imread(image)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        train_data.append(gray)
+
+    for image in train_data_split_images:
+        img =  cv2.imread(image)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        train_data_split_crossfold.append(gray)
+
+    for image in test_data_images:
+        img =  cv2.imread(image)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        test_data.append(gray)
+
+    sift = cv2.xfeatures2d.SIFT_create()
+    for image in train_data:
+        (kps, descs) = sift.detectAndCompute(image, None)
+        train_data_features.append(descs)
+
+    for image in train_data_split_crossfold:
+        (kps, descs) = sift.detectAndCompute(image, None)
+        train_data_features.append(descs)
+
+    for image in test_data:
+        (kps, descs) = sift.detectAndCompute(image, None)
+        test_data_features.append(descs)
+
+    print("# kps: {}, descriptors: {}".format(len(kps), descs.shape))
+    #surf = cv2.xfeatures2d.SURF_create()
+    #(kps, descs) = surf.detectAndCompute(gray, None)
+    print("# kps: {}, descriptors: {}".format(len(kps), descs.shape))
+    #surf = cv2.xfeatures2d.SURF_create()
+    #sd = cv2.FeatureDetector_create("SURF")
+    #(kps, descs) = surf.detectAndCompute(gray, None)
     #diogokp,des = surf.compute(img, keypoints)
-    model = svm.SVC()
+    #model = svm.SVC()
     #diogomodel.fit(des,['type1'])
 elif int(settings['ImageFeatureExtraction']['Algorithm']) == 3:
-    sift = cv2.SIFT()
-    train_data_features = sift.detect(train_data)
-    test_data_features = sift.detect(test_data)
+    print(3)
+    #sift = cv2.SIFT()
+    #train_data_features = sift.detect(train_data)
+    #test_data_features = sift.detect(test_data)
 elif int(settings['ImageFeatureExtraction']['Algorithm']) == 4:
     n_clusters = 5  # number of regions
     # for img in train_data
