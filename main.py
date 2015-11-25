@@ -18,7 +18,7 @@ from skimage.feature import hog
 from skimage import data, color, exposure
 
 
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import pandas as pd
 #import matplotlib.pyplot as plt
@@ -42,8 +42,8 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 from skimage.io import imread
-#from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-#from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 import sys
 
 CROSS_TEST = 0
@@ -54,6 +54,7 @@ PERCEPTRON = 4
 LOGISTICS_REGRESSION = 5
 DECISION_TREE = 6
 ADABOOST = 7
+LINEARSVM = 8
 
 RANDOMIZED_PCA = 1
 SIFT = 2
@@ -508,6 +509,32 @@ elif int(settings['MachineLearningAlgorithm']['Algorithm']) == CROSS_TEST:#0
         model = clf.fit(train_data_features, labels)
         predicted_classes = model.predict(test_data_features)
         class_probabilities = model.predict_proba(test_data_features)
+elif int(settings['MachineLearningAlgorithm']['Algorithm']) == LINEARSVM:#8
+    if using_cross_validation2:
+        C_base = 0.025
+        C_step = 0.005
+        C = C_base
+        _results = []
+        for train, test in kf:
+            svc = SVC(kernel="linear", C=C, probability=True)
+            model = svc.fit(train_data_features[train], labels[train])
+            predicted_classes = model.predict(train_data_features[test])
+            class_probabilities = model.predict_proba(train_data_features[test])
+            print("n points:", len(predicted_classes), ", wrong: ", (labels[test] != predicted_classes).sum(), " percentage: ",(labels[test] != predicted_classes).sum()*100/len(predicted_classes),"%")
+            _results.append((labels[test] != predicted_classes).sum())
+            C += C_step
+        C = C_base + C_step * _results.index(min(_results))
+        print("C: ", C)
+        svc = SVC(kernel="linear", C=C, probability=True)
+        model = svc.fit(train_data_features, labels)
+        predicted_classes = model.predict(test_data_features)
+        class_probabilities = model.predict_proba(test_data_features)
+    else:
+        svc = SVC(kernel="linear", C=0.025, probability=True)
+        model = svc.fit(train_data_features, labels)
+        predicted_classes = model.predict(test_data_features)
+        class_probabilities = model.predict_proba(test_data_features)
+
 
 #print(labels_validation)
 #print(predicted_classes)
