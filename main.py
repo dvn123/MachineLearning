@@ -41,6 +41,7 @@ from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
+from skimage.io import imread
 #from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 #from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 import sys
@@ -57,7 +58,7 @@ ADABOOST = 7
 RANDOMIZED_PCA = 1
 SIFT = 2
 SURF = 3
-HISTOGRAM_OF_GRADIENTS = 4
+HISTOGRAM_OF_GRADIENTS = 5
 
 def read_settings(file_name='settings.ini'):
     config = configparser.ConfigParser()
@@ -192,7 +193,6 @@ read_settings()
 using_cross_validation = False
 using_cross_validation2 = False
 
-
 if(len(train_data_split_images) == 0):
     test_data_images = load_test_set('test/', percentage=float(settings['Data']['TestPercent']))
 else:
@@ -260,7 +260,7 @@ elif int(settings['ImageFeatureExtraction']['Algorithm']) == SIFT:
 
     #surf = cv2.xfeatures2d.SURF_create()
     #(kps, descs) = surf.detectAndCompute(gray, None)
-    print("# kps: {}, descriptors: {}".format(len(kps), descs.shape))
+    #print("# kps: {}, descriptors: {}".format(len(kps), descs.shape))
     #surf = cv2.xfeatures2d.SURF_create()
     #sd = cv2.FeatureDetector_create("SURF")
     #(kps, descs) = surf.detectAndCompute(gray, None)
@@ -286,7 +286,32 @@ elif int(settings['ImageFeatureExtraction']['Algorithm']) == 4:
     #   feature = image.AgglomerativeClustering(n_clusters=n_clusters,
     #                                           linkage='ward', connectivity=connectivity).fit(X)
     #   test_data_features.append(feature)
+elif int(settings['ImageFeatureExtraction']['Algorithm']) == HISTOGRAM_OF_GRADIENTS:
+    for image in train_data_images:
+        img = imread(image, as_grey=True)
+        train_data.append(img)
 
+    for image in train_data_split_images:
+        img = imread(image, as_grey=True)
+        train_data_split_crossfold.append(img)
+
+    for image in test_data_images:
+        img = imread(image, as_grey=True)
+        test_data.append(img)
+
+    for image in train_data:
+        fd = hog(image)
+        #print("# kps: {}, descriptors: {}".format(len(kps), descs.shape))
+        train_data_features.append(fd)
+
+    for image in train_data_split_crossfold:
+        fd = hog(image)
+        train_data_features.append(fd)
+
+    for image in test_data:
+        fd = hog(image)
+        test_data_features.append(fd)
+    sys.exit(0)
 
 if int(settings['Data']['CrossValidation2']) > 1:
     kf = KFold(len(train_data_features), n_folds=int(settings['Data']['CrossValidation2']), shuffle=True)
