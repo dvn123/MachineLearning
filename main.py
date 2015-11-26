@@ -42,8 +42,10 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 from skimage.io import imread
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
+from skimage.transform import resize
+from sklearn.cluster import KMeans
+#from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+#from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 import sys
 
 CROSS_TEST = 0
@@ -54,7 +56,7 @@ PERCEPTRON = 4
 LOGISTICS_REGRESSION = 5
 DECISION_TREE = 6
 ADABOOST = 7
-LINEARSVM = 8
+LINEAR_SVM = 8
 
 RANDOMIZED_PCA = 1
 SIFT = 2
@@ -80,22 +82,6 @@ def flatten_image(img):
     s = img.shape[0] * img.shape[1]
     img_wide = img.reshape(1, s)
     return img_wide[0]
-
-
-'''def render3Dplot(data, labels):
-    pca = RandomizedPCA(n_components=3)
-    X = pca.fit_transform(data)
-    df = pd.DataFrame({"x": X[:, 0], "y": X[:, 1], "z": X[:, 2],"label":labels})
-    uniquelabels = [labels[i] for i in range(len(labels)) if labels[i] != labels[i-1]]
-    N = len(uniquelabels)
-    colors = ["red","Aqua","Aquamarine","Bisque","Black","Blue","BlueViolet","Chartreuse","Chocolate","DarkGreen","DeepPink","yellow"]
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    for label, color in zip(uniquelabels, colors):
-        mask = df.loc[df['label']==label]
-        ax.scatter(mask.x,mask.y, mask.z, c=color, label=label)
-    plt.legend()
-    plt.show()'''
 
 
 def load_train_set(img_dir, cross_validation=1, percentage=1.0):
@@ -134,18 +120,6 @@ def load_train_set(img_dir, cross_validation=1, percentage=1.0):
     image_x_y_mean = list(map(lambda x: math.floor(x/(len(_images_validation) + len(_images))), image_x_y_mean))
     global IMG_SIZE
     IMG_SIZE = image_x_y_mean
-
-    #data = []
-    #data_validation = []
-    #for image in _images:
-        #img = img_to_matrix(image, IMG_SIZE)
-        #img = flatten_image(img)
-        #data.append(img)
-
-    #for image2 in _images_validation:
-        #img2 = img_to_matrix(image2, IMG_SIZE)
-        #img2 = flatten_image(img2)
-        #data_validation.append(img2)
 
     return np.array(_images), np.array(_images_validation), np.transpose(np.array(_labels)), np.transpose(np.array(_labels_validation))
 
@@ -202,11 +176,10 @@ else:
 
 train_data_features = []
 test_data_features = []
-
-
 train_data = []
 train_data_split_crossfold = []
 test_data = []
+
 #Choose Image algorithm (Chosen in settings.ini)
 if int(settings['ImageFeatureExtraction']['Algorithm']) == RANDOMIZED_PCA:
     for image in train_data_images:
@@ -228,46 +201,71 @@ if int(settings['ImageFeatureExtraction']['Algorithm']) == RANDOMIZED_PCA:
     train_data_features = pca.fit_transform(train_data)
     test_data_features = pca.transform(test_data)
 elif int(settings['ImageFeatureExtraction']['Algorithm']) == SIFT:
+    print(4)
+    bow_train = cv2.BOWKMeansTrainer(8)
+
+    flann_params = dict(algorithm = 1, trees = 5)
+    matcher = cv2.FlannBasedMatcher(flann_params, {})
+
+    detect = cv2.xfeatures2d.SIFT_create()
+    extract = cv2.xfeatures2d.SIFT_create()
+
+    bow_extract = cv2.BOWImgDescriptorExtractor(extract, matcher)
+    #help(bow_train)
+    #help(bow_extract)
     for image in train_data_images:
         img =  cv2.imread(image)
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        resized_image = cv2.resize(img, (91,92))
+        gray = cv2.cvtColor(resized_image, cv2.COLOR_BGR2GRAY)
         train_data.append(gray)
 
     for image in train_data_split_images:
         img =  cv2.imread(image)
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        resized_image = cv2.resize(img, (91,92))
+        gray = cv2.cvtColor(resized_image, cv2.COLOR_BGR2GRAY)
         train_data_split_crossfold.append(gray)
 
     for image in test_data_images:
         img =  cv2.imread(image)
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        resized_image = cv2.resize(img, (91,92))
+        gray = cv2.cvtColor(resized_image, cv2.COLOR_BGR2GRAY)
         test_data.append(gray)
 
-    sift = cv2.xfeatures2d.SIFT_create()
+    print(6)
+
     for image in train_data:
-        (kps, descs) = sift.detectAndCompute(image, None)
-        #print("# kps: {}, descriptors: {}".format(len(kps), descs.shape))
-        train_data_features.append(descs)
+        descs = extract.compute(image, detect.detect(image))[1]
+        if descs is None:
+            continue
+        #print(descs)
+        bow_train.add(descs)
 
-    for image in train_data_split_crossfold:
-        (kps, descs) = sift.detectAndCompute(image, None)
-        train_data_features.append(descs)
+    print(8)
+    voc = bow_train.cluster()
+    bow_extract.setVocabulary(voc)
 
+    print(7)
+    for image in train_data:
+        a = bow_extract.compute(image, detect.detect(image))
+        if a is None:
+            continue
+        train_data_features.append(a.flatten())
+    print(len(train_data_features))
+    #for image in train_data_split_crossfold:
+        #bowDes = bow_extract.compute(image, kps, descs)
+        #train_data_features.append(bow_extract.compute(image, detect.detect(image)))
+        #train_data_features.append(descs)
     for image in test_data:
-        (kps, descs) = sift.detectAndCompute(image, None)
-        test_data_features.append(descs)
-    sys.exit(0)
+        #(kps, descs) = detect.detectAndCompute(image, None)
+        #bowDes = bow_extract.compute(image, kps, descs)
+        a = bow_extract.compute(image, detect.detect(image))
+        if a is None:
+            continue
+        test_data_features.append(a.flatten())
 
-
-    #surf = cv2.xfeatures2d.SURF_create()
-    #(kps, descs) = surf.detectAndCompute(gray, None)
-    #print("# kps: {}, descriptors: {}".format(len(kps), descs.shape))
-    #surf = cv2.xfeatures2d.SURF_create()
-    #sd = cv2.FeatureDetector_create("SURF")
-    #(kps, descs) = surf.detectAndCompute(gray, None)
-    #diogokp,des = surf.compute(img, keypoints)
-    #model = svm.SVC()
-    #diogomodel.fit(des,['type1'])
+    train_data_features = np.asarray(train_data_features)
+    test_data_features = np.asarray(test_data_features)
+    print(5)
 elif int(settings['ImageFeatureExtraction']['Algorithm']) == SURF:
     print(3)
     #sift = cv2.SIFT()
@@ -275,41 +273,36 @@ elif int(settings['ImageFeatureExtraction']['Algorithm']) == SURF:
     #test_data_features = sift.detect(test_data)
 elif int(settings['ImageFeatureExtraction']['Algorithm']) == 4:
     n_clusters = 5  # number of regions
-    # for img in train_data
-        # X = np.reshape(value, (-1, 1) )
-        #connectivity = image.grid_to_graph(*img.shape);
-        #feature = image.AgglomerativeClustering(n_clusters=n_clusters,
-        #                                      linkage='ward', connectivity=connectivity).fit(X)
-        # train_data_features.append(feature)
-    #for img in test_data
-    #    X = np.reshape(img, (-1, 1) )
-    #   connectivity = image.grid_to_graph(*img.shape);
-    #   feature = image.AgglomerativeClustering(n_clusters=n_clusters,
-    #                                           linkage='ward', connectivity=connectivity).fit(X)
-    #   test_data_features.append(feature)
+    for image in train_data:
+        #X = np.reshape(value, (-1, 1) )
+        img = imread(image, as_grey=True)
+        connectivity = image.grid_to_graph(*img.shape)
+        feature = image.AgglomerativeClustering(n_clusters=n_clusters, linkage='ward', connectivity=connectivity).fit(img)
+        train_data_features.append(feature)
+    for img in test_data:
+        X = np.reshape(img, (-1, 1) )
+        connectivity = image.grid_to_graph(*img.shape)
+        feature = image.AgglomerativeClustering(n_clusters=n_clusters, linkage='ward', connectivity=connectivity).fit(X)
+        test_data_features.append(feature)
 elif int(settings['ImageFeatureExtraction']['Algorithm']) == HISTOGRAM_OF_GRADIENTS:
     for image in train_data_images:
-        img = cv2.imread(image)
-        img = color.rgb2gray(img)
-        img = cv2.resize(img, (80,80))
+        img = imread(image, as_grey=True)
+        img = resize(img, IMG_SIZE)
         train_data.append(img)
 
     for image in train_data_split_images:
-        img = cv2.imread(image)
-        img = color.rgb2gray(img)
-        img = cv2.resize(img, (80,80))
+        img = imread(image, as_grey=True)
+        img = resize(img, IMG_SIZE)
         train_data_split_crossfold.append(img)
 
     for image in test_data_images:
-        img = cv2.imread(image)
-        img = color.rgb2gray(img)
-        img = cv2.resize(img, (80,80))
+        img = imread(image, as_grey=True)
+        img = resize(img, IMG_SIZE)
         test_data.append(img)
 
     for image in train_data:
         fd = hog(image)
         train_data_features.append(fd)
-
 
     for image in train_data_split_crossfold:
         fd = hog(image)
@@ -321,7 +314,6 @@ elif int(settings['ImageFeatureExtraction']['Algorithm']) == HISTOGRAM_OF_GRADIE
 
     train_data_features = np.array(train_data_features)
     test_data_features= np.array(test_data_features)
-
 
 if int(settings['Data']['CrossValidation2']) > 1:
     kf = KFold(len(train_data_features), n_folds=int(settings['Data']['CrossValidation2']), shuffle=True)
@@ -518,7 +510,7 @@ elif int(settings['MachineLearningAlgorithm']['Algorithm']) == CROSS_TEST:#0
         model = clf.fit(train_data_features, labels)
         predicted_classes = model.predict(test_data_features)
         class_probabilities = model.predict_proba(test_data_features)
-elif int(settings['MachineLearningAlgorithm']['Algorithm']) == LINEARSVM:#8
+elif int(settings['MachineLearningAlgorithm']['Algorithm']) == LINEAR_SVM:#8
     if using_cross_validation2:
         C_base = 0.025
         C_step = 0.005
