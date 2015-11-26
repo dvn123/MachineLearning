@@ -15,17 +15,17 @@ from sklearn.naive_bayes import GaussianNB
 #from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 #from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 
-def naive_bayes(train_data_features, test_data_features, labels):
+def naive_bayes(train_data_features, train_data_split_crossfold_features, test_data_features, labels, labels_cross_validation_classwise):
     gnb = GaussianNB()
     model = gnb.fit(train_data_features, labels)
     return model.predict_proba(test_data_features), model.predict(test_data_features), model
 
-def perc(train_data_features, test_data_features, labels):
+def perc(train_data_features, train_data_split_crossfold_features, test_data_features, labels, labels_cross_validation_classwise):
     prc = Perceptron()
     model = prc.fit(train_data_features, labels)
     return model.predict_proba(test_data_features), model.predict(test_data_features), model
 
-def log_res(train_data_features, test_data_features, labels, using_cross_validation2, kf):
+def log_res(train_data_features, train_data_split_crossfold_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf):
     if using_cross_validation2:
         #print("LOGRES")
         logres_C = 1
@@ -52,7 +52,7 @@ def log_res(train_data_features, test_data_features, labels, using_cross_validat
         model = clf_l1_LR.fit(train_data_features, labels)
         return model.predict_proba(test_data_features), model.predict(test_data_features), model
 
-def cross_test(train_data_features, test_data_features, labels, using_cross_validation2, kf):
+def cross_test(train_data_features, train_data_split_crossfold_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf):
     if using_cross_validation2:
 
         _results = []
@@ -93,7 +93,7 @@ def cross_test(train_data_features, test_data_features, labels, using_cross_vali
         predicted_classes = model.predict(test_data_features)
         class_probabilities = model.predict_proba(test_data_features)
 
-def linear_svm(train_data_features, test_data_features, labels, using_cross_validation2, kf):
+def linear_svm(train_data_features, train_data_split_crossfold_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf):
     if using_cross_validation2:
         C_base = 0.025
         C_step = 0.005
@@ -117,7 +117,7 @@ def linear_svm(train_data_features, test_data_features, labels, using_cross_vali
         model = svc.fit(train_data_features, labels)
         return model.predict_proba(test_data_features), model.predict(test_data_features), model
 
-def adaboost(train_data_features, test_data_features, labels, using_cross_validation2, kf):
+def adaboost(train_data_features, train_data_split_crossfold_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf):
     if using_cross_validation2:
         _results = np.zeros(10)
         base_n_estimators = 100 # week learners
@@ -136,12 +136,20 @@ def adaboost(train_data_features, test_data_features, labels, using_cross_valida
             #print(class_probabilities.shape)
             #print(class_probabilities)
             print("ada week learners: ", n_estimators ,"learning rate ",lr," n points:", len(predicted_classes),
-                  " percentage: ",(labels[test] != predicted_classes).sum()*100/len(predicted_classes),"%"," sum of errors: ", _results[0], ", log_loss: ", aux_functions.log_loss(labels[test], class_probabilities))
+                  " percentage: ",(labels[test] != predicted_classes).sum()*100/len(predicted_classes),"%"," sum of errors: ", _results[0])
             _results[0] += (labels[test] != predicted_classes).sum()
             ada_results.append((labels[test] != predicted_classes).sum())
             n_estimators += step_n_estimators
         n_estimators = base_n_estimators + step_n_estimators * ada_results.index(min(ada_results))
         print("optimized week learners ", n_estimators)
+        if(len(train_data_split_crossfold_features) > 0):
+            rf = RandomForestClassifier(max_depth=395, n_estimators=80, max_features=7).fit(train_data_features, labels)
+            clf = AdaBoostClassifier(base_estimator=rf, n_estimators = n_estimators, learning_rate = lr)
+            model = clf.fit(train_data_features, labels)
+            predicted_classes = model.predict(train_data_split_crossfold_features)
+            class_probabilities = model.predict_proba(train_data_split_crossfold_features)
+            print("N points:", len(predicted_classes), " percentage: ",(labels_cross_validation_classwise != predicted_classes).sum()*100/len(predicted_classes),"%")
+            print("Log_loss: ", log_loss(labels_cross_validation_classwise, class_probabilities))
         #dt = DecisionTreeClassifier(max_depth=26).fit(train_data_features, labels)
         rf = RandomForestClassifier(max_depth=395, n_estimators=80, max_features=7).fit(train_data_features, labels)
         clf = AdaBoostClassifier(base_estimator=rf, n_estimators = n_estimators, learning_rate = lr)
@@ -159,7 +167,7 @@ def adaboost(train_data_features, test_data_features, labels, using_cross_valida
         model = clf.fit(train_data_features, labels)
         return model.predict_proba(test_data_features), model.predict(test_data_features), model
 
-def des_tree(train_data_features, test_data_features, labels, using_cross_validation2, kf):
+def des_tree(train_data_features, train_data_split_crossfold_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf):
     if using_cross_validation2:
         _results = []
         base_max_depth = 6
@@ -183,7 +191,7 @@ def des_tree(train_data_features, test_data_features, labels, using_cross_valida
         model = clf.fit(train_data_features, labels)
         return model.predict_proba(test_data_features), model.predict(test_data_features), model
 
-def svm_model(train_data_features, test_data_features, labels, using_cross_validation2, kf):
+def svm_model(train_data_features, train_data_split_crossfold_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf):
     if using_cross_validation2:
         svm_results = np.zeros(10)
         #k_neighbors = 2
@@ -200,7 +208,7 @@ def svm_model(train_data_features, test_data_features, labels, using_cross_valid
         model = _svm.fit(train_data_features, labels)
         return model.predict_proba(test_data_features), model.predict(test_data_features), model
 
-def k_nearest_neighbors(train_data_features, test_data_features, labels, using_cross_validation2, kf):
+def k_nearest_neighbors(train_data_features, train_data_split_crossfold_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf):
     if using_cross_validation2:
         k_neighbors_results = np.zeros(10)
         #k_neighbors = 1

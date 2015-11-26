@@ -25,11 +25,13 @@ def flatten_image(img):
 
 
 def randomized_pca(train_data_images, train_data_split_images, test_data_images, IMG_SIZE):
+    train_data = []
+    train_data_split_crossfold = []
+    test_data = []
+
+    train_data_split_crossfold_features = []
     train_data_features = []
     test_data_features = []
-    train_data = []
-    test_data = []
-    train_data_split_crossfold = []
 
     for image in train_data_images:
         img = img_to_matrix(image, IMG_SIZE)
@@ -47,14 +49,16 @@ def randomized_pca(train_data_images, train_data_split_images, test_data_images,
         test_data.append(img)
 
     pca = RandomizedPCA(50)
-    return (pca.fit_transform(train_data), pca.transform(test_data))
+    return (pca.fit_transform(train_data), pca.transform(train_data_split_crossfold), pca.transform(test_data))
 
 def sift(train_data_images, train_data_split_images, test_data_images):
+    train_data = []
+    train_data_split_crossfold = []
+    test_data = []
+
+    train_data_split_crossfold_features = []
     train_data_features = []
     test_data_features = []
-    train_data = []
-    test_data = []
-    train_data_split_crossfold = []
     print(4)
     bow_train = cv2.BOWKMeansTrainer(8)
 
@@ -104,11 +108,13 @@ def sift(train_data_images, train_data_split_images, test_data_images):
         if a is None:
             continue
         train_data_features.append(a.flatten())
-    print(len(train_data_features))
-    #for image in train_data_split_crossfold:
-    #bowDes = bow_extract.compute(image, kps, descs)
-    #train_data_features.append(bow_extract.compute(image, detect.detect(image)))
-    #train_data_features.append(descs)
+
+    for image in train_data_split_crossfold:
+        a = bow_extract.compute(image, detect.detect(image))
+        if a is None:
+            continue
+        train_data_split_crossfold_features.append(a.flatten())
+
     for image in test_data:
         #(kps, descs) = detect.detectAndCompute(image, None)
         #bowDes = bow_extract.compute(image, kps, descs)
@@ -117,14 +123,16 @@ def sift(train_data_images, train_data_split_images, test_data_images):
             continue
         test_data_features.append(a.flatten())
 
-    return np.asarray(train_data_features), np.asarray(test_data_features)
+    return np.asarray(train_data_features), np.asarray(train_data_split_crossfold_features), np.asarray(test_data_features)
 
 def hog_features(train_data_images, train_data_split_images, test_data_images, IMG_SIZE):
+    train_data = []
+    train_data_split_crossfold = []
+    test_data = []
+
+    train_data_split_crossfold_features = []
     train_data_features = []
     test_data_features = []
-    train_data = []
-    test_data = []
-    train_data_split_crossfold = []
     for image in train_data_images:
         img = imread(image, as_grey=True)
         img = resize(img, IMG_SIZE)
@@ -146,10 +154,10 @@ def hog_features(train_data_images, train_data_split_images, test_data_images, I
 
     for image in train_data_split_crossfold:
         fd = hog(image)
-        train_data_features.append(fd)
+        train_data_split_crossfold_features.append(fd)
 
     for image in test_data:
         fd = hog(image)
         test_data_features.append(fd)
 
-    return np.array(train_data_features), np.array(test_data_features)
+    return np.array(train_data_features), np.array(train_data_split_crossfold_features), np.array(test_data_features)

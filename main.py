@@ -57,7 +57,7 @@ def load_train_set(img_dir, cross_validation_classwise=1, percentage=1.0):
             n_images = 0
             n_images_to_load = math.ceil(len([f for f in os.listdir(img_dir + superclass + "/" + subclass) if os.path.isfile(os.path.join(img_dir + superclass + "/" + subclass, f))]) * percentage)
             if cross_validation_classwise > 1:
-                n_images_validation = math.floor(n_images_to_load/cross_validation_classwise)
+                n_images_validation = math.ceil(n_images_to_load/cross_validation_classwise)
             else:
                 n_images_validation = 0
             for image in os.listdir(img_dir + superclass + "/" + subclass):
@@ -120,28 +120,31 @@ def write(class_probabilities, file_name='results/' + (datetime.now()).strftime(
 settings = None
 read_settings()
 
-(train_data_images, train_data_split_images, labels, labels_validation) = load_train_set('train/', cross_validation_classwise=float(settings['Data']['TrainPercent']), percentage=float(settings['Data']['TrainPercent']))
+(train_data_images, train_data_cross_validation_classwise_images, labels, labels_cross_validation_classwise) = load_train_set('train/', cross_validation_classwise=int(settings['Data']['CrossValidationClasswise']), percentage=float(settings['Data']['TrainPercent']))
+test_data_images = load_test_set('test/', percentage=float(settings['Data']['TestPercent']))
 
-using_cross_validation = False
+using_cross_validation_classwise = False
 using_cross_validation2 = False
 
-if(len(train_data_split_images) == 0):
-    test_data_images = load_test_set('test/', percentage=float(settings['Data']['TestPercent']))
+if(len(train_data_cross_validation_classwise_images) == 0):
+    using_cross_validation_classwise = True
+    #test_data_images = load_test_set('test/', percentage=float(settings['Data']['TestPercent']))
 else:
-    using_cross_validation = False
-    test_data_images = train_data_split_images
+    using_cross_validation_classwise = False
 
+train_data = []
+train_data_cross_validation_classwise = []
+test_data = []
+
+train_data_cross_validation_classwise_features = []
 train_data_features = []
 test_data_features = []
-train_data = []
-train_data_split_crossfold = []
-test_data = []
 
 #Choose Image algorithm (Chosen in settings.ini)
 if int(settings['ImageFeatureExtraction']['Algorithm']) == RANDOMIZED_PCA:
-    train_data_features, test_data_features = image_features.randomized_pca(train_data_images, train_data_split_images, test_data_images, IMG_SIZE)
+    train_data_features, train_data_cross_validation_classwise_features, test_data_features = image_features.randomized_pca(train_data_images, train_data_cross_validation_classwise_images, test_data_images, IMG_SIZE)
 elif int(settings['ImageFeatureExtraction']['Algorithm']) == SIFT:
-    train_data_features, test_data_features = image_features.sift(train_data_images, train_data_split_images,  test_data_images)
+    train_data_features, train_data_cross_validation_classwise_features, test_data_features = image_features.sift(train_data_images, train_data_cross_validation_classwise_images,  test_data_images)
 elif int(settings['ImageFeatureExtraction']['Algorithm']) == 4:
     n_clusters = 5  # number of regions
     for image in train_data:
@@ -156,7 +159,9 @@ elif int(settings['ImageFeatureExtraction']['Algorithm']) == 4:
         feature = image.AgglomerativeClustering(n_clusters=n_clusters, linkage='ward', connectivity=connectivity).fit(X)
         test_data_features.append(feature)
 elif int(settings['ImageFeatureExtraction']['Algorithm']) == HISTOGRAM_OF_GRADIENTS:
-    train_data_features, test_data_features = image_features.hog_features(train_data_images, train_data_split_images, test_data_images, IMG_SIZE)
+    train_data_features, train_data_cross_validation_classwise_features, test_data_features = image_features.hog_features(train_data_images, train_data_cross_validation_classwise_images, test_data_images, IMG_SIZE)
+
+
 if int(settings['Data']['CrossValidation2']) > 1:
     kf = KFold(len(train_data_features), n_folds=int(settings['Data']['CrossValidation2']), shuffle=True)
     using_cross_validation2 = True
@@ -167,23 +172,23 @@ model = None
 
 #Choose ML algorithm (Chosen in settings.ini)
 if int(settings['MachineLearningAlgorithm']['Algorithm']) == NAIVE_BAYES:#1
-    class_probabilities, predicted_classes, model = machine_learning_models.naive_bayes(train_data_features, test_data_features, labels)
+    class_probabilities, predicted_classes, model = machine_learning_models.naive_bayes(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == SUPPORT_VECTOR_MACHINES:#2
-    class_probabilities, predicted_classes, model = machine_learning_models.svm_model(train_data_features, test_data_features, labels, using_cross_validation2, kf)
+    class_probabilities, predicted_classes, model = machine_learning_models.svm_model(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == K_NEAREST_NEIGHBORGS:#3
-    class_probabilities, predicted_classes, model = machine_learning_models.k_nearest_neighbors(train_data_features, test_data_features, labels, using_cross_validation2, kf)
+    class_probabilities, predicted_classes, model = machine_learning_models.k_nearest_neighbors(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == PERCEPTRON:#4
-    class_probabilities, predicted_classes, model = machine_learning_models.perc(train_data_features, test_data_features, labels)
+    class_probabilities, predicted_classes, model = machine_learning_models.perc(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == LOGISTICS_REGRESSION:#5
-    class_probabilities, predicted_classes, model = machine_learning_models.log_res(train_data_features, test_data_features, labels, using_cross_validation2, kf)
+    class_probabilities, predicted_classes, model = machine_learning_models.log_res(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == DECISION_TREE:#6
-    class_probabilities, predicted_classes, model = machine_learning_models.des_tree(train_data_features, test_data_features, labels, using_cross_validation2, kf)
+    class_probabilities, predicted_classes, model = machine_learning_models.des_tree(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == ADABOOST:#7
-    class_probabilities, predicted_classes, model = machine_learning_models.adaboost(train_data_features, test_data_features, labels, using_cross_validation2, kf)
+    class_probabilities, predicted_classes, model = machine_learning_models.adaboost(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == CROSS_TEST:#0
-    class_probabilities, predicted_classes, model = machine_learning_models.cross_test(train_data_features, test_data_features, labels, using_cross_validation2, kf)
+    class_probabilities, predicted_classes, model = machine_learning_models.cross_test(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == LINEAR_SVM:#8
-    class_probabilities, predicted_classes, model = machine_learning_models.linear_svm(train_data_features, test_data_features, labels, using_cross_validation2, kf)
+    class_probabilities, predicted_classes, model = machine_learning_models.linear_svm(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf)
 
 #print(labels_validation)
 #print(predicted_classes)
