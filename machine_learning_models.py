@@ -1,5 +1,9 @@
 import numpy as np
 
+from sklearn.metrics import log_loss
+from sklearn.neighbors import KNeighborsClassifier
+
+import aux_functions
 from sklearn import svm, metrics
 from sklearn import neighbors
 from sklearn.linear_model import Perceptron
@@ -50,27 +54,44 @@ def log_res(train_data_features, test_data_features, labels, using_cross_validat
 
 def cross_test(train_data_features, test_data_features, labels, using_cross_validation2, kf):
     if using_cross_validation2:
-        C_base = 0.025
-        C_step = 0.005
-        C = C_base
+
         _results = []
-        for train, test in kf:
-            svc = SVC(kernel="linear", C=C, probability=True)
-            model = svc.fit(train_data_features[train], labels[train])
-            predicted_classes = model.predict(train_data_features[test])
-            class_probabilities = model.predict_proba(train_data_features[test])
-            print("n points:", len(predicted_classes), ", wrong: ", (labels[test] != predicted_classes).sum(), " percentage: ",(labels[test] != predicted_classes).sum()*100/len(predicted_classes),"%")
-            _results.append((labels[test] != predicted_classes).sum())
-            C += C_step
-        C = C_base + C_step * _results.index(min(_results))
-        print("C: ", C)
-        svc = SVC(kernel="linear", C=C, probability=True)
-        model = svc.fit(train_data_features, labels)
-        return model.predict_proba(test_data_features), model.predict(test_data_features), model
+        global_results = []
+
+        names = ["Nearest Neighbors", "Linear SVM", "RBF SVM", "Decision Tree",
+                 "Random Forest", "AdaBoost", "Naive Bayes", "Linear Discriminant Analysis",
+                 "Quadratic Discriminant Analysis"]
+        classifiers = [
+            KNeighborsClassifier(3),
+            SVC(kernel="linear", C=0.025, probability=True),
+            SVC(gamma=2, C=1, probability=True),
+            DecisionTreeClassifier(max_depth=5),
+            RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),
+            AdaBoostClassifier(),
+            GaussianNB(),
+            LinearDiscriminantAnalysis(),
+            QuadraticDiscriminantAnalysis()]
+
+        for name, clf in zip(names, classifiers):
+            for train, test in kf:
+                model = clf.fit(train_data_features[train], labels[train])
+                predicted_classes = model.predict(train_data_features[test])
+                class_probabilities = model.predict_proba(train_data_features[test])
+                print(name," n points:", len(predicted_classes), ", wrong: ", (labels[test] != predicted_classes).sum(), " percentage: ",(labels[test] != predicted_classes).sum()*100/len(predicted_classes),"%")
+                _results.append((labels[test] != predicted_classes).sum())
+            result = min(_results)
+            global_results.append((name,result))
+        print(global_results)
+
+        clf = AdaBoostClassifier()
+        model = clf.fit(train_data_features, labels)
+        predicted_classes = model.predict(test_data_features)
+        class_probabilities = model.predict_proba(test_data_features)
     else:
-        svc = SVC(kernel="linear", C=0.025, probability=True)
-        model = svc.fit(train_data_features, labels)
-        return model.predict_proba(test_data_features), model.predict(test_data_features), model
+        clf = AdaBoostClassifier()
+        model = clf.fit(train_data_features, labels)
+        predicted_classes = model.predict(test_data_features)
+        class_probabilities = model.predict_proba(test_data_features)
 
 def linear_svm(train_data_features, test_data_features, labels, using_cross_validation2, kf):
     if using_cross_validation2:
@@ -105,15 +126,17 @@ def adaboost(train_data_features, test_data_features, labels, using_cross_valida
         n_estimators = base_n_estimators
         lr = 1.48
         for train, test in kf:
-            #dt = DecisionTreeClassifier(max_depth=26).fit(train_data_features, labels)
             rf = RandomForestClassifier(max_depth=395, n_estimators=80, max_features=7).fit(train_data_features, labels)
-            #max_d += 2
             clf = AdaBoostClassifier(algorithm='SAMME.R', base_estimator=rf, n_estimators = n_estimators, learning_rate = lr)
-            #lr += 0.01
             model = clf.fit(train_data_features[train], labels[train])
             predicted_classes = model.predict(train_data_features[test])
             class_probabilities = model.predict_proba(train_data_features[test])
-            print("ada week learners: ", n_estimators ,"learning rate ",lr," n points:", len(predicted_classes), ", wrong: ", (labels[test] != predicted_classes).sum(), " percentage: ",(labels[test] != predicted_classes).sum()*100/len(predicted_classes),"%"," sum of errors: ", _results[0])
+            #print(test)
+            #print(labels[test].shape)
+            #print(class_probabilities.shape)
+            #print(class_probabilities)
+            print("ada week learners: ", n_estimators ,"learning rate ",lr," n points:", len(predicted_classes),
+                  " percentage: ",(labels[test] != predicted_classes).sum()*100/len(predicted_classes),"%"," sum of errors: ", _results[0], ", log_loss: ", aux_functions.log_loss(labels[test], class_probabilities))
             _results[0] += (labels[test] != predicted_classes).sum()
             ada_results.append((labels[test] != predicted_classes).sum())
             n_estimators += step_n_estimators

@@ -41,7 +41,7 @@ def read_settings(file_name='settings.ini'):
     global settings
     settings = config
 
-def load_train_set(img_dir, cross_validation=1, percentage=1.0):
+def load_train_set(img_dir, cross_validation_classwise=1, percentage=1.0):
     _superclasses = [f for f in os.listdir(img_dir)]
     _images = []
     _images_validation = []
@@ -56,8 +56,8 @@ def load_train_set(img_dir, cross_validation=1, percentage=1.0):
             if(subclass == ".DS_Store"): continue
             n_images = 0
             n_images_to_load = math.ceil(len([f for f in os.listdir(img_dir + superclass + "/" + subclass) if os.path.isfile(os.path.join(img_dir + superclass + "/" + subclass, f))]) * percentage)
-            if cross_validation > 1:
-                n_images_validation = math.floor(n_images_to_load/cross_validation)
+            if cross_validation_classwise > 1:
+                n_images_validation = math.floor(n_images_to_load/cross_validation_classwise)
             else:
                 n_images_validation = 0
             for image in os.listdir(img_dir + superclass + "/" + subclass):
@@ -120,7 +120,7 @@ def write(class_probabilities, file_name='results/' + (datetime.now()).strftime(
 settings = None
 read_settings()
 
-(train_data_images, train_data_split_images, labels, labels_validation) = load_train_set('train/', cross_validation=1, percentage=float(settings['Data']['TrainPercent']))
+(train_data_images, train_data_split_images, labels, labels_validation) = load_train_set('train/', cross_validation_classwise=float(settings['Data']['TrainPercent']), percentage=float(settings['Data']['TrainPercent']))
 
 using_cross_validation = False
 using_cross_validation2 = False
