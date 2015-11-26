@@ -126,7 +126,7 @@ def hog_features(train_data_images, train_data_split_images, test_data_images, I
     test_data = []
     train_data_split_crossfold = []
 
-    IMG_SIZE = (20,20)
+    IMG_SIZE = (91,92)
     orientations = 8
     pixels_per_cell = (5, 5)
     cells_per_block = (2, 2)

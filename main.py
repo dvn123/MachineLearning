@@ -172,23 +172,23 @@ model = None
 
 #Choose ML algorithm (Chosen in settings.ini)
 if int(settings['MachineLearningAlgorithm']['Algorithm']) == NAIVE_BAYES:#1
-    class_probabilities, predicted_classes, model = machine_learning_models.naive_bayes(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise)
+    class_probabilities, predicted_classes, model = machine_learning_models.naive_bayes(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise , kf, settings)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == SUPPORT_VECTOR_MACHINES:#2
-    class_probabilities, predicted_classes, model = machine_learning_models.svm_model(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf)
+    class_probabilities, predicted_classes, model = machine_learning_models.svm_model(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf, settings)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == K_NEAREST_NEIGHBORGS:#3
-    class_probabilities, predicted_classes, model = machine_learning_models.k_nearest_neighbors(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf)
+    class_probabilities, predicted_classes, model = machine_learning_models.k_nearest_neighbors(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf, settings)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == PERCEPTRON:#4
-    class_probabilities, predicted_classes, model = machine_learning_models.perc(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise)
+    class_probabilities, predicted_classes, model = machine_learning_models.perc(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, kf, settings)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == LOGISTICS_REGRESSION:#5
-    class_probabilities, predicted_classes, model = machine_learning_models.log_res(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf)
+    class_probabilities, predicted_classes, model = machine_learning_models.log_res(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf, settings)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == DECISION_TREE:#6
-    class_probabilities, predicted_classes, model = machine_learning_models.des_tree(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf)
+    class_probabilities, predicted_classes, model = machine_learning_models.des_tree(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf, settings)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == ADABOOST:#7
-    class_probabilities, predicted_classes, model = machine_learning_models.adaboost(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf)
+    class_probabilities, predicted_classes, model = machine_learning_models.adaboost(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf, settings)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == CROSS_TEST:#0
-    class_probabilities, predicted_classes, model = machine_learning_models.cross_test(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf)
+    class_probabilities, predicted_classes, model = machine_learning_models.cross_test(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf, settings)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == LINEAR_SVM:#8
-    class_probabilities, predicted_classes, model = machine_learning_models.linear_svm(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf)
+    class_probabilities, predicted_classes, model = machine_learning_models.linear_svm(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf, settings)
 
 #print(labels_validation)
 #print(predicted_classes)
