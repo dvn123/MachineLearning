@@ -1,52 +1,24 @@
 from PIL import Image
 import os
 import math
+import sys
 
 from sklearn.cross_validation import KFold
 
 import aux_functions
+import image_features
+import machine_learning_models
 
 import numpy as np
 
 import configparser
 import cv2
 
-
 from datetime import datetime
 
-from skimage.feature import hog
-from skimage import data, color, exposure
-
-
-#import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-import pandas as pd
-#import matplotlib.pyplot as plt
-#from mpl_toolkits.mplot3d import Axes3D
-#import pandas as pd
-
-from sklearn.decomposition import RandomizedPCA
-from sklearn.naive_bayes import GaussianNB
 from sklearn import svm, metrics
-from sklearn import neighbors
-from sklearn.linear_model import Perceptron
-from sklearn import cross_validation
-from sklearn.linear_model import LogisticRegression
 from sklearn.feature_extraction import image
-from sklearn.cross_validation import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.datasets import make_moons, make_circles, make_classification
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.svm import SVC
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
-from sklearn.naive_bayes import GaussianNB
 from skimage.io import imread
-from skimage.transform import resize
-from sklearn.cluster import KMeans
-#from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-#from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
-import sys
 
 CROSS_TEST = 0
 NAIVE_BAYES = 1
@@ -68,21 +40,6 @@ def read_settings(file_name='settings.ini'):
     config.read(file_name)
     global settings
     settings = config
-
-
-def img_to_matrix(filename, size):
-    img = Image.open(filename)
-    img = img.resize(size)
-    img = list(img.getdata())
-    img = np.array(img)
-    return img
-
-
-def flatten_image(img):
-    s = img.shape[0] * img.shape[1]
-    img_wide = img.reshape(1, s)
-    return img_wide[0]
-
 
 def load_train_set(img_dir, cross_validation=1, percentage=1.0):
     _superclasses = [f for f in os.listdir(img_dir)]
@@ -182,95 +139,9 @@ test_data = []
 
 #Choose Image algorithm (Chosen in settings.ini)
 if int(settings['ImageFeatureExtraction']['Algorithm']) == RANDOMIZED_PCA:
-    for image in train_data_images:
-        img = img_to_matrix(image, IMG_SIZE)
-        img = flatten_image(img)
-        train_data.append(img)
-
-    for image in train_data_split_images:
-        img = img_to_matrix(image, IMG_SIZE)
-        img = flatten_image(img)
-        train_data_split_crossfold.append(img)
-
-    for image in test_data_images:
-        img = img_to_matrix(image, IMG_SIZE)
-        img = flatten_image(img)
-        test_data.append(img)
-
-    pca = RandomizedPCA(n_components=int(settings['ImageFeatureExtraction']['NumberFeatures']))
-    train_data_features = pca.fit_transform(train_data)
-    test_data_features = pca.transform(test_data)
+    train_data_features, test_data_features = image_features.randomized_pca(train_data_images, train_data_split_images, test_data_images, IMG_SIZE)
 elif int(settings['ImageFeatureExtraction']['Algorithm']) == SIFT:
-    print(4)
-    bow_train = cv2.BOWKMeansTrainer(8)
-
-    flann_params = dict(algorithm = 1, trees = 5)
-    matcher = cv2.FlannBasedMatcher(flann_params, {})
-
-    detect = cv2.xfeatures2d.SIFT_create()
-    extract = cv2.xfeatures2d.SIFT_create()
-
-    bow_extract = cv2.BOWImgDescriptorExtractor(extract, matcher)
-    #help(bow_train)
-    #help(bow_extract)
-    for image in train_data_images:
-        img =  cv2.imread(image)
-        resized_image = cv2.resize(img, (91,92))
-        gray = cv2.cvtColor(resized_image, cv2.COLOR_BGR2GRAY)
-        train_data.append(gray)
-
-    for image in train_data_split_images:
-        img =  cv2.imread(image)
-        resized_image = cv2.resize(img, (91,92))
-        gray = cv2.cvtColor(resized_image, cv2.COLOR_BGR2GRAY)
-        train_data_split_crossfold.append(gray)
-
-    for image in test_data_images:
-        img =  cv2.imread(image)
-        resized_image = cv2.resize(img, (91,92))
-        gray = cv2.cvtColor(resized_image, cv2.COLOR_BGR2GRAY)
-        test_data.append(gray)
-
-    print(6)
-
-    for image in train_data:
-        descs = extract.compute(image, detect.detect(image))[1]
-        if descs is None:
-            continue
-        #print(descs)
-        bow_train.add(descs)
-
-    print(8)
-    voc = bow_train.cluster()
-    bow_extract.setVocabulary(voc)
-
-    print(7)
-    for image in train_data:
-        a = bow_extract.compute(image, detect.detect(image))
-        if a is None:
-            continue
-        train_data_features.append(a.flatten())
-    print(len(train_data_features))
-    #for image in train_data_split_crossfold:
-        #bowDes = bow_extract.compute(image, kps, descs)
-        #train_data_features.append(bow_extract.compute(image, detect.detect(image)))
-        #train_data_features.append(descs)
-    for image in test_data:
-        #(kps, descs) = detect.detectAndCompute(image, None)
-        #bowDes = bow_extract.compute(image, kps, descs)
-        a = bow_extract.compute(image, detect.detect(image))
-        if a is None:
-            continue
-        test_data_features.append(a.flatten())
-
-    train_data_features = np.asarray(train_data_features)
-    test_data_features = np.asarray(test_data_features)
-    print(5)
-elif int(settings['ImageFeatureExtraction']['Algorithm']) == SURF:
-    print(3)
-    #sift = cv2.SIFT()
-    #train_data_features = sift.detect(train_data)
-    #test_data_features = sift.detect(test_data)
+    train_data_features, test_data_features = image_features.sift(train_data_images, train_data_split_images,  test_data_images)
 elif int(settings['ImageFeatureExtraction']['Algorithm']) == 4:
     n_clusters = 5  # number of regions
     for image in train_data:
@@ -285,36 +156,7 @@ elif int(settings['ImageFeatureExtraction']['Algorithm']) == 4:
         feature = image.AgglomerativeClustering(n_clusters=n_clusters, linkage='ward', connectivity=connectivity).fit(X)
         test_data_features.append(feature)
 elif int(settings['ImageFeatureExtraction']['Algorithm']) == HISTOGRAM_OF_GRADIENTS:
-    for image in train_data_images:
-        img = imread(image, as_grey=True)
-        img = resize(img, IMG_SIZE)
-        train_data.append(img)
-
-    for image in train_data_split_images:
-        img = imread(image, as_grey=True)
-        img = resize(img, IMG_SIZE)
-        train_data_split_crossfold.append(img)
-
-    for image in test_data_images:
-        img = imread(image, as_grey=True)
-        img = resize(img, IMG_SIZE)
-        test_data.append(img)
-
-    for image in train_data:
-        fd = hog(image)
-        train_data_features.append(fd)
-
-    for image in train_data_split_crossfold:
-        fd = hog(image)
-        train_data_features.append(fd)
-
-    for image in test_data:
-        fd = hog(image)
-        test_data_features.append(fd)
-
-    train_data_features = np.array(train_data_features)
-    test_data_features= np.array(test_data_features)
-
+    train_data_features, test_data_features = image_features.hog_features(train_data_images, train_data_split_images, test_data_images, IMG_SIZE)
 if int(settings['Data']['CrossValidation2']) > 1:
     kf = KFold(len(train_data_features), n_folds=int(settings['Data']['CrossValidation2']), shuffle=True)
     using_cross_validation2 = True
@@ -325,224 +167,25 @@ model = None
 
 #Choose ML algorithm (Chosen in settings.ini)
 if int(settings['MachineLearningAlgorithm']['Algorithm']) == NAIVE_BAYES:#1
-    gnb = GaussianNB()
-    model = gnb.fit(train_data_features, labels)
-    predicted_classes = model.predict(test_data_features)
-    class_probabilities = model.predict_proba(test_data_features)
+    class_probabilities, predicted_classes, model = machine_learning_models.naive_bayes(train_data_features, test_data_features, labels)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == SUPPORT_VECTOR_MACHINES:#2
-    if using_cross_validation2:
-        svm_results = np.zeros(10)
-        #k_neighbors = 2
-        #k_neighbors_results = []
-        for train, test in kf:
-            _svm = svm.SVC(probability=True, kernel='sigmoid')
-            model = _svm.fit(train_data_features[train], labels[train])
-            predicted_classes = model.predict(train_data_features[test])
-            class_probabilities = model.predict_proba(train_data_features[test])
-            print("n points:", len(predicted_classes), ", wrong: ", (labels[test] != predicted_classes).sum(), " sum of errors: ", svm_results[0])
-            svm_results[0] += (labels[test] != predicted_classes).sum()
-        k_neighbors = list(svm_results).index(min(svm_results)) + 2
-        _svm = svm.SVC(probability=True)
-        model = _svm.fit(train_data_features, labels)
-        predicted_classes = model.predict(test_data_features)
-        class_probabilities = model.predict_proba(test_data_features)
+    class_probabilities, predicted_classes, model = machine_learning_models.svm_model(train_data_features, test_data_features, labels, using_cross_validation2, kf)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == K_NEAREST_NEIGHBORGS:#3
-    if using_cross_validation2:
-        k_neighbors_results = np.zeros(10)
-        #k_neighbors = 1
-        #k_neighbors_results = []
-        for train, test in kf:
-            for k_neighbors in range(2,10):
-                clf = neighbors.KNeighborsClassifier(k_neighbors)
-                model = clf.fit(train_data_features[train], labels[train])
-                predicted_classes = model.predict(train_data_features[test])
-                class_probabilities = model.predict_proba(train_data_features[test])
-                print("K result, i - ", k_neighbors, ", n points:", len(predicted_classes), ", wrong: ", (labels[test] != predicted_classes).sum(), " sum of errors: ", k_neighbors_results[k_neighbors], " percentage: ",(labels[test] != predicted_classes).sum()*100/len(predicted_classes),"%")
-                k_neighbors_results[k_neighbors] += (labels[test] != predicted_classes).sum()
-        k_neighbors = list(k_neighbors_results).index(min(k_neighbors_results)) + 2
-        print("k = ",k_neighbors)
-        clf = neighbors.KNeighborsClassifier(k_neighbors)
-        model = clf.fit(train_data_features, labels)
-        predicted_classes = model.predict(test_data_features)
-        class_probabilities = model.predict_proba(test_data_features)
-    else:
-        k_neighbors = 8
-        clf = neighbors.KNeighborsClassifier(k_neighbors)
-        model = clf.fit(train_data_features, labels)
-        predicted_classes = model.predict(test_data_features)
-        class_probabilities = model.predict_proba(test_data_features)
+    class_probabilities, predicted_classes, model = machine_learning_models.k_nearest_neighbors(train_data_features, test_data_features, labels, using_cross_validation2, kf)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == PERCEPTRON:#4
-    prc = Perceptron()
-    model = prc.fit(train_data_features, labels)
-    predicted_classes = model.predict(test_data_features)
-    class_probabilities = model.score(test_data_features,predicted_classes)
+    class_probabilities, predicted_classes, model = machine_learning_models.perc(train_data_features, test_data_features, labels)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == LOGISTICS_REGRESSION:#5
-    if using_cross_validation2:
-        #print("LOGRES")
-        logres_C = 1
-        logres_results = []
-        for train, test in kf:
-            C = logres_C
-            p = 'l1'
-            clf_l1_LR = LogisticRegression(C=C, penalty=p, tol=0.01)
-            model = clf_l1_LR.fit(train_data_features[train], labels[train])
-            predicted_classes = model.predict(train_data_features[test])
-            class_probabilities = model.predict_proba(train_data_features[test])
-            print(" n points:", len(predicted_classes), ", wrong: ", (labels[test] != predicted_classes).sum(), " percentage: ",(labels[test] != predicted_classes).sum()*100/len(predicted_classes),"%")
-            logres_results.append((labels[test] != predicted_classes).sum())
-            logres_C += 1
-        logres_C = logres_results.index(min(logres_results)) + 1
-        print("Log Res C: ", logres_C)
-        clf_l1_LR = LogisticRegression(C=logres_C, penalty=p, tol=0.01)
-        model = clf_l1_LR.fit(train_data_features, labels)
-        predicted_classes = model.predict(test_data_features)
-        class_probabilities = model.predict_proba(test_data_features)
-    else:
-        C = 1
-        p = 'l1'
-        clf_l1_LR = LogisticRegression(C=C, penalty=p, tol=0.01)
-        model = clf_l1_LR.fit(train_data_features, labels)
-        predicted_classes = model.predict(test_data_features)
-        class_probabilities = model.predict_proba(test_data_features)
+    class_probabilities, predicted_classes, model = machine_learning_models.log_res(train_data_features, test_data_features, labels, using_cross_validation2, kf)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == DECISION_TREE:#6
-    if using_cross_validation2:
-        _results = []
-        base_max_depth = 6
-        max_depth = base_max_depth
-        step_max_depth = 100
-        for train, test in kf:
-            clf = DecisionTreeClassifier(max_depth=max_depth)
-            model = clf.fit(train_data_features[train], labels[train])
-            predicted_classes = model.predict(train_data_features[test])
-            class_probabilities = model.predict_proba(train_data_features[test])
-            print("maxd ",max_depth," |n points:", len(predicted_classes), ", wrong: ", (labels[test] != predicted_classes).sum(), " percentage: ",(labels[test] != predicted_classes).sum()*100/len(predicted_classes),"%")
-            max_depth += step_max_depth
-            _results.append((labels[test] != predicted_classes).sum())
-        max_depth = 6 + step_max_depth * list(_results).index(min(_results))
-        print("opt max depth ",max_depth)
-        clf = DecisionTreeClassifier(max_depth = max_depth)
-        model = clf.fit(train_data_features, labels)
-        predicted_classes = model.predict(test_data_features)
-        class_probabilities = model.predict_proba(test_data_features)
-    else:
-        clf = DecisionTreeClassifier()
-        model = clf.fit(train_data_features, labels)
-        predicted_classes = model.predict(test_data_features)
-        class_probabilities = model.predict_proba(test_data_features)
+    class_probabilities, predicted_classes, model = machine_learning_models.des_tree(train_data_features, test_data_features, labels, using_cross_validation2, kf)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == ADABOOST:#7
-    if using_cross_validation2:
-        _results = np.zeros(10)
-        base_n_estimators = 100 # week learners
-        step_n_estimators = 100
-        ada_results = []
-        n_estimators = base_n_estimators
-        lr = 1.48
-        for train, test in kf:
-            #dt = DecisionTreeClassifier(max_depth=26).fit(train_data_features, labels)
-            rf = RandomForestClassifier(max_depth=395, n_estimators=80, max_features=7).fit(train_data_features, labels)
-            #max_d += 2
-            clf = AdaBoostClassifier(algorithm='SAMME.R', base_estimator=rf, n_estimators = n_estimators, learning_rate = lr)
-            #lr += 0.01
-            model = clf.fit(train_data_features[train], labels[train])
-            predicted_classes = model.predict(train_data_features[test])
-            class_probabilities = model.predict_proba(train_data_features[test])
-            print("ada week learners: ", n_estimators ,"learning rate ",lr," n points:", len(predicted_classes), ", wrong: ", (labels[test] != predicted_classes).sum(), " percentage: ",(labels[test] != predicted_classes).sum()*100/len(predicted_classes),"%"," sum of errors: ", _results[0])
-            _results[0] += (labels[test] != predicted_classes).sum()
-            ada_results.append((labels[test] != predicted_classes).sum())
-            n_estimators += step_n_estimators
-        n_estimators = base_n_estimators + step_n_estimators * ada_results.index(min(ada_results))
-        print("optimized week learners ", n_estimators)
-        #dt = DecisionTreeClassifier(max_depth=26).fit(train_data_features, labels)
-        rf = RandomForestClassifier(max_depth=395, n_estimators=80, max_features=7).fit(train_data_features, labels)
-        clf = AdaBoostClassifier(base_estimator=rf, n_estimators = n_estimators, learning_rate = lr)
-        model = clf.fit(train_data_features, labels)
-        predicted_classes = model.predict(test_data_features)
-        class_probabilities = model.predict_proba(test_data_features)
-    else:
-        clf_l1_LR = LogisticRegression(C=1, penalty='l1', tol=0.01)
-        lr = clf_l1_LR.fit(train_data_features, labels)
-        dt = DecisionTreeClassifier()
-        dt = dt.fit(train_data_features, labels)
-        clf = AdaBoostClassifier(
-            base_estimator=dt,
-            learning_rate=1,
-            n_estimators=250)
-        model = clf.fit(train_data_features, labels)
-        predicted_classes = model.predict(test_data_features)
-        class_probabilities = model.predict_proba(test_data_features)
+    class_probabilities, predicted_classes, model = machine_learning_models.adaboost(train_data_features, test_data_features, labels, using_cross_validation2, kf)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == CROSS_TEST:#0
-    if using_cross_validation2:
-
-        _results = []
-        global_results = []
-
-        names = ["Nearest Neighbors", "Linear SVM", "RBF SVM", "Decision Tree",
-         "Random Forest", "AdaBoost", "Naive Bayes", "Linear Discriminant Analysis",
-         "Quadratic Discriminant Analysis"]
-        classifiers = [
-            KNeighborsClassifier(3),
-            SVC(kernel="linear", C=0.025, probability=True),
-            SVC(gamma=2, C=1, probability=True),
-            DecisionTreeClassifier(max_depth=5),
-            RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),
-            AdaBoostClassifier(),
-            GaussianNB(),
-            LinearDiscriminantAnalysis(),
-            QuadraticDiscriminantAnalysis()]
-
-        for name, clf in zip(names, classifiers):
-            for train, test in kf:
-                model = clf.fit(train_data_features[train], labels[train])
-                predicted_classes = model.predict(train_data_features[test])
-                class_probabilities = model.predict_proba(train_data_features[test])
-                print(name," n points:", len(predicted_classes), ", wrong: ", (labels[test] != predicted_classes).sum(), " percentage: ",(labels[test] != predicted_classes).sum()*100/len(predicted_classes),"%")
-                _results.append((labels[test] != predicted_classes).sum())
-            result = min(_results)
-            global_results.append((name,result))
-        print(global_results)
-
-        clf = AdaBoostClassifier()
-        model = clf.fit(train_data_features, labels)
-        predicted_classes = model.predict(test_data_features)
-        class_probabilities = model.predict_proba(test_data_features)
-    else:
-        clf = AdaBoostClassifier()
-        model = clf.fit(train_data_features, labels)
-        predicted_classes = model.predict(test_data_features)
-        class_probabilities = model.predict_proba(test_data_features)
+    class_probabilities, predicted_classes, model = machine_learning_models.cross_test(train_data_features, test_data_features, labels, using_cross_validation2, kf)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == LINEAR_SVM:#8
-    if using_cross_validation2:
-        C_base = 0.025
-        C_step = 0.005
-        C = C_base
-        _results = []
-        for train, test in kf:
-            svc = SVC(kernel="linear", C=C, probability=True)
-            model = svc.fit(train_data_features[train], labels[train])
-            predicted_classes = model.predict(train_data_features[test])
-            class_probabilities = model.predict_proba(train_data_features[test])
-            print("n points:", len(predicted_classes), ", wrong: ", (labels[test] != predicted_classes).sum(), " percentage: ",(labels[test] != predicted_classes).sum()*100/len(predicted_classes),"%")
-            _results.append((labels[test] != predicted_classes).sum())
-            C += C_step
-        C = C_base + C_step * _results.index(min(_results))
-        print("C: ", C)
-        svc = SVC(kernel="linear", C=C, probability=True)
-        model = svc.fit(train_data_features, labels)
-        predicted_classes = model.predict(test_data_features)
-        class_probabilities = model.predict_proba(test_data_features)
-    else:
-        svc = SVC(kernel="linear", C=0.025, probability=True)
-        model = svc.fit(train_data_features, labels)
-        predicted_classes = model.predict(test_data_features)
-        class_probabilities = model.predict_proba(test_data_features)
-
+    class_probabilities, predicted_classes, model = machine_learning_models.linear_svm(train_data_features, test_data_features, labels, using_cross_validation2, kf)
 
 #print(labels_validation)
 #print(predicted_classes)
-if using_cross_validation:
-    #print("Number of mislabeled points out of a total ", len(labels_validation), " points: ", (labels_validation != predicted_classes).sum())
-    #print("Classification report for classifier %s:\n%s\n"      % (classifier, metrics.classification_report(expected, predicted)))
-    print("Confusion matrix:\n%s" % metrics.confusion_matrix(labels_validation, predicted_classes))
-    print("Classification report for classifier %s:\n%s\n" % (model, metrics.classification_report(labels_validation, predicted_classes)))
 
 write(class_probabilities)
