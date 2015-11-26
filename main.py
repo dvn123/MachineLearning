@@ -289,21 +289,27 @@ elif int(settings['ImageFeatureExtraction']['Algorithm']) == 4:
     #   test_data_features.append(feature)
 elif int(settings['ImageFeatureExtraction']['Algorithm']) == HISTOGRAM_OF_GRADIENTS:
     for image in train_data_images:
-        img = imread(image, as_grey=True)
+        img = cv2.imread(image)
+        img = color.rgb2gray(img)
+        img = cv2.resize(img, (80,80))
         train_data.append(img)
 
     for image in train_data_split_images:
-        img = imread(image, as_grey=True)
+        img = cv2.imread(image)
+        img = color.rgb2gray(img)
+        img = cv2.resize(img, (80,80))
         train_data_split_crossfold.append(img)
 
     for image in test_data_images:
-        img = imread(image, as_grey=True)
+        img = cv2.imread(image)
+        img = color.rgb2gray(img)
+        img = cv2.resize(img, (80,80))
         test_data.append(img)
 
     for image in train_data:
         fd = hog(image)
-        #print("# kps: {}, descriptors: {}".format(len(kps), descs.shape))
         train_data_features.append(fd)
+
 
     for image in train_data_split_crossfold:
         fd = hog(image)
@@ -312,7 +318,10 @@ elif int(settings['ImageFeatureExtraction']['Algorithm']) == HISTOGRAM_OF_GRADIE
     for image in test_data:
         fd = hog(image)
         test_data_features.append(fd)
-    sys.exit(0)
+
+    train_data_features = np.array(train_data_features)
+    test_data_features= np.array(test_data_features)
+
 
 if int(settings['Data']['CrossValidation2']) > 1:
     kf = KFold(len(train_data_features), n_folds=int(settings['Data']['CrossValidation2']), shuffle=True)
