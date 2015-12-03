@@ -32,8 +32,10 @@ LINEAR_SVM = 8
 
 RANDOMIZED_PCA = 1
 SIFT = 2
-SURF = 3
-HISTOGRAM_OF_GRADIENTS = 5
+HISTOGRAM_OF_GRADIENTS = 3
+DAISY = 4
+CANNY = 5
+
 
 def read_settings(file_name='settings.ini'):
     config = configparser.ConfigParser()
@@ -145,7 +147,15 @@ if int(settings['ImageFeatureExtraction']['Algorithm']) == RANDOMIZED_PCA:
     train_data_features, train_data_cross_validation_classwise_features, test_data_features = image_features.randomized_pca(train_data_images, train_data_cross_validation_classwise_images, test_data_images, IMG_SIZE)
 elif int(settings['ImageFeatureExtraction']['Algorithm']) == SIFT:
     train_data_features, train_data_cross_validation_classwise_features, test_data_features = image_features.sift(train_data_images, train_data_cross_validation_classwise_images,  test_data_images)
-elif int(settings['ImageFeatureExtraction']['Algorithm']) == 4:
+elif int(settings['ImageFeatureExtraction']['Algorithm']) == HISTOGRAM_OF_GRADIENTS:
+    train_data_features, train_data_cross_validation_classwise_features, test_data_features = image_features.hog_features(train_data_images, train_data_cross_validation_classwise_images, test_data_images, IMG_SIZE)
+elif int(settings['ImageFeatureExtraction']['Algorithm']) == DAISY:
+    train_data_features, train_data_cross_validation_classwise_features, test_data_features = image_features.daisy_features(train_data_images, train_data_cross_validation_classwise_images, test_data_images, IMG_SIZE)
+elif int(settings['ImageFeatureExtraction']['Algorithm']) == CANNY:
+    train_data_features, train_data_cross_validation_classwise_features, test_data_features = image_features.canny(train_data_images, train_data_cross_validation_classwise_images, test_data_images, IMG_SIZE)
+
+
+"""elif int(settings['ImageFeatureExtraction']['Algorithm']) == 4:
     n_clusters = 5  # number of regions
     for image in train_data:
         #X = np.reshape(value, (-1, 1) )
@@ -157,10 +167,7 @@ elif int(settings['ImageFeatureExtraction']['Algorithm']) == 4:
         X = np.reshape(img, (-1, 1) )
         connectivity = image.grid_to_graph(*img.shape)
         feature = image.AgglomerativeClustering(n_clusters=n_clusters, linkage='ward', connectivity=connectivity).fit(X)
-        test_data_features.append(feature)
-elif int(settings['ImageFeatureExtraction']['Algorithm']) == HISTOGRAM_OF_GRADIENTS:
-    train_data_features, train_data_cross_validation_classwise_features, test_data_features = image_features.hog_features(train_data_images, train_data_cross_validation_classwise_images, test_data_images, IMG_SIZE)
-
+        test_data_features.append(feature)"""
 
 if int(settings['Data']['CrossValidation2']) > 1:
     kf = KFold(len(train_data_features), n_folds=int(settings['Data']['CrossValidation2']), shuffle=True)
@@ -189,6 +196,8 @@ elif int(settings['MachineLearningAlgorithm']['Algorithm']) == CROSS_TEST:#0
     class_probabilities, predicted_classes, model = machine_learning_models.cross_test(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf, settings)
 elif int(settings['MachineLearningAlgorithm']['Algorithm']) == LINEAR_SVM:#8
     class_probabilities, predicted_classes, model = machine_learning_models.linear_svm(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf, settings)
+elif int(settings['MachineLearningAlgorithm']['Algorithm']) == 9:#9
+    class_probabilities, predicted_classes, model = machine_learning_models.rbf_svm(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf, settings)
 
 #print(labels_validation)
 #print(predicted_classes)

@@ -2,7 +2,7 @@ import numpy as np
 
 from sklearn.metrics import log_loss
 from sklearn.neighbors import KNeighborsClassifier
-
+import pylab as pl
 import aux_functions
 from sklearn import svm, metrics
 from sklearn import neighbors
@@ -13,6 +13,8 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.cross_validation import KFold
+from sklearn.grid_search import GridSearchCV
+from sklearn.cross_validation import StratifiedShuffleSplit
 
 #from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 #from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
@@ -32,7 +34,7 @@ def log_res(train_data_features, train_data_cross_validation_classwise_features,
         logres_C = 1
         logres_results = []
         if(len(train_data_cross_validation_classwise_features) > 0):
-            train_all = np.append(train_data_features, train_data_cross_validation_classwise_features, axis=0)
+            """train_all = np.append(train_data_features, train_data_cross_validation_classwise_features, axis=0)
             labels_all = np.append(labels, labels_cross_validation_classwise)
             kf_all = KFold(len(train_all)-1, n_folds=int(settings['Data']['CrossValidation2']), shuffle=True)
             for train, test in kf_all:
@@ -44,7 +46,17 @@ def log_res(train_data_features, train_data_cross_validation_classwise_features,
                 predicted_classes_train = model.predict(train_all[train])
                 print("N points:", len(predicted_classes), " percentage: ",(labels_all[test] != predicted_classes).sum()*100/len(predicted_classes),"%, percentage_train: ", (labels_all[train] != predicted_classes_train).sum()*100/len(predicted_classes_train))
                 logres_results.append((labels_all[test] != predicted_classes).sum())
-                logres_C += 1
+                logres_C += 1"""
+            for c in pl.frange(logres_C,15, 1):
+                clf_l1_LR = LogisticRegression(C=c, solver='lbfgs', penalty='l2', tol=0.01)
+                model = clf_l1_LR.fit(train_data_features, labels)
+                predicted_classes = model.predict(train_data_cross_validation_classwise_features)
+                predicted_classes_train = model.predict(train_data_features)
+                class_probabilities = model.predict_proba(train_data_cross_validation_classwise_features)
+                logres_results.append(log_loss(labels_cross_validation_classwise, class_probabilities))
+                print("N points:", len(predicted_classes), " percentage: ",(labels_cross_validation_classwise != predicted_classes).sum()*100/len(predicted_classes),
+                      "%, percentage_train: ", (labels != predicted_classes_train).sum()*100/len(predicted_classes_train))
+                print("Log_loss: ", log_loss(labels_cross_validation_classwise, class_probabilities))
         else:
             for train, test in kf:
                 C = logres_C
@@ -56,17 +68,18 @@ def log_res(train_data_features, train_data_cross_validation_classwise_features,
                 print("N points:", len(predicted_classes), " percentage: ",(labels[test] != predicted_classes).sum()*100/len(predicted_classes),"%, percentage_train: ", (labels[train] != predicted_classes_train).sum()*100/len(predicted_classes_train))
                 logres_results.append((labels[test] != predicted_classes).sum())
                 logres_C += 1
+        print(logres_results)
         logres_C = logres_results.index(min(logres_results)) + 1
         print("Log Res C: ", logres_C)
         if(len(train_data_cross_validation_classwise_features) > 0):
-            clf_l1_LR = LogisticRegression(C=logres_C, penalty=p, tol=0.01)
+            clf_l1_LR = LogisticRegression(C=logres_C, penalty='l2', tol=0.01)
             model = clf_l1_LR.fit(train_data_features, labels)
             predicted_classes = model.predict(train_data_cross_validation_classwise_features)
             predicted_classes_train = model.predict(train_data_features)
             class_probabilities = model.predict_proba(train_data_cross_validation_classwise_features)
             print("N points:", len(predicted_classes), " percentage: ",(labels_cross_validation_classwise != predicted_classes).sum()*100/len(predicted_classes),"%, percentage_train: ", (labels != predicted_classes_train).sum()*100/len(predicted_classes_train))
             print("Log_loss: ", log_loss(labels_cross_validation_classwise, class_probabilities))
-        clf_l1_LR = LogisticRegression(C=logres_C, penalty=p, tol=0.01)
+        clf_l1_LR = LogisticRegression(C=logres_C, penalty='l1', tol=0.01)
         model = clf_l1_LR.fit(train_data_features, labels)
         return model.predict_proba(test_data_features), model.predict(test_data_features), model
     else:
@@ -119,12 +132,12 @@ def cross_test(train_data_features, train_data_split_crossfold_features, test_da
 
 def linear_svm(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf, settings):
     if using_cross_validation2:
-        C_base = 4.5
+        C_base = 0.5
         C_step = 0.5#0.005
         C = C_base
         _results = []
         if(len(train_data_cross_validation_classwise_features) > 0):
-            train_all = np.append(train_data_features, train_data_cross_validation_classwise_features, axis=0)
+            """train_all = np.append(train_data_features, train_data_cross_validation_classwise_features, axis=0)
             labels_all = np.append(labels, labels_cross_validation_classwise)
             kf_all = KFold(len(train_all)-1, n_folds=int(settings['Data']['CrossValidation2']), shuffle=True)
             for train, test in kf_all:
@@ -135,7 +148,16 @@ def linear_svm(train_data_features, train_data_cross_validation_classwise_featur
                 class_probabilities = model.predict_proba(train_all[test])
                 print("C: ",C," n points:", len(predicted_classes), " percentage: ",(labels_all[test] != predicted_classes).sum()*100/len(predicted_classes),"% percentage_train: ", (labels_all[train] != predicted_classes_train).sum()*100/len(predicted_classes_train),"%")
                 _results.append((labels_all[test] != predicted_classes).sum())
-                C += C_step
+                C += C_step"""
+            for c in pl.frange(C_base,9, C_step):
+                svc = SVC(kernel="linear", C=c, probability=True)
+                model = svc.fit(train_data_features, labels)
+                predicted_classes = model.predict(train_data_cross_validation_classwise_features)
+                predicted_classes_train = model.predict(train_data_features)
+                class_probabilities = model.predict_proba(train_data_cross_validation_classwise_features)
+                print("C: ",c," N points:", len(predicted_classes), " percentage: ",(labels_cross_validation_classwise != predicted_classes).sum()*100/len(predicted_classes),"% percentage_train: ", (labels != predicted_classes_train).sum()*100/len(predicted_classes_train),"%")
+                print("Log_loss: ", log_loss(labels_cross_validation_classwise, class_probabilities))
+                _results.append(log_loss(labels_cross_validation_classwise, class_probabilities))
         else:
             for train, test in kf:
                 svc = SVC(kernel="linear", C=C, probability=True)
@@ -146,6 +168,7 @@ def linear_svm(train_data_features, train_data_cross_validation_classwise_featur
                 print("C: ",C," n points:", len(predicted_classes), " percentage: ",(labels[test] != predicted_classes).sum()*100/len(predicted_classes),"% percentage_train: ", (labels[train] != predicted_classes_train).sum()*100/len(predicted_classes_train),"%")
                 _results.append((labels[test] != predicted_classes).sum())
                 C += C_step
+
         C = C_base + C_step * _results.index(min(_results))
         print("C: ", C)
         if(len(train_data_cross_validation_classwise_features) > 0):
@@ -162,20 +185,32 @@ def linear_svm(train_data_features, train_data_cross_validation_classwise_featur
         svc = SVC(kernel="linear", C=8, probability=True)
         model = svc.fit(train_data_features, labels)
         return model.predict_proba(test_data_features), model.predict(test_data_features), model
+
 def rbf_svm(train_data_features, train_data_cross_validation_classwise_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf, settings):
     if using_cross_validation2:
-        C_base = 4.5
-        C_step = 0.5#0.005
+        C_base = 1000
+        C_step = 1000#0.005
         C = C_base
-        gamma_base = 0.40
-        gamma_step = 0.00
+        gamma_base = (1/(len(train_data_cross_validation_classwise_features)))/5
+        gamma_step = 1/(len(train_data_cross_validation_classwise_features))/10
         gamma = gamma_base
         _results = []
         if(len(train_data_cross_validation_classwise_features) > 0):
             train_all = np.append(train_data_features, train_data_cross_validation_classwise_features, axis=0)
             labels_all = np.append(labels, labels_cross_validation_classwise)
             kf_all = KFold(len(train_all)-1, n_folds=int(settings['Data']['CrossValidation2']), shuffle=True)
-            for train, test in kf_all:
+            print(1/(len(train_data_cross_validation_classwise_features)))
+            #for c in pl.frange(gamma_base,1/(len(train_data_cross_validation_classwise_features)), gamma_step):
+            """for c in pl.frange(C_base,10000, C_step):
+                svc = SVC(kernel="rbf", C=c, probability=True)
+                model = svc.fit(train_data_features, labels)
+                predicted_classes = model.predict(train_data_cross_validation_classwise_features)
+                predicted_classes_train = model.predict(train_data_features)
+                class_probabilities = model.predict_proba(train_data_cross_validation_classwise_features)
+                print("C: ",c," N points:", len(predicted_classes), " percentage: ",(labels_cross_validation_classwise != predicted_classes).sum()*100/len(predicted_classes),"% percentage_train: ", (labels != predicted_classes_train).sum()*100/len(predicted_classes_train),"%")
+                print("Log_loss: ", log_loss(labels_cross_validation_classwise, class_probabilities))
+                _results.append(log_loss(labels_cross_validation_classwise, class_probabilities))"""
+            """for train, test in kf_all:
                 svc = SVC(kernel="rbf", C=C, gamma = gamma, probability=True)
                 model = svc.fit(train_all[train], labels_all[train])
                 predicted_classes = model.predict(train_all[test])
@@ -183,7 +218,7 @@ def rbf_svm(train_data_features, train_data_cross_validation_classwise_features,
                 class_probabilities = model.predict_proba(train_all[test])
                 print("C: ",C," n points:", len(predicted_classes), " percentage: ",(labels_all[test] != predicted_classes).sum()*100/len(predicted_classes),"% percentage_train: ", (labels_all[train] != predicted_classes_train).sum()*100/len(predicted_classes_train),"%")
                 _results.append((labels_all[test] != predicted_classes).sum())
-                C += C_step
+                C += C_step"""
         else:
             for train, test in kf:
                 svc = SVC(kernel="rbf", C=C, gamma = gamma)
@@ -193,10 +228,11 @@ def rbf_svm(train_data_features, train_data_cross_validation_classwise_features,
                 print("C: ",C," n points:", len(predicted_classes), " percentage: ",(labels[test] != predicted_classes).sum()*100/len(predicted_classes),"% percentage_train: ", (labels[train] != predicted_classes_train).sum()*100/len(predicted_classes_train),"%")
                 _results.append((labels[test] != predicted_classes).sum())
                 C += C_step
-        C = C_base + C_step * _results.index(min(_results))
+        #C = C_base + C_step * _results.index(min(_results))
+        C = 1000
         print("C: ", C)
         if(len(train_data_cross_validation_classwise_features) > 0):
-            svc = SVC(kernel="rbf", C=C, gamma = gamma, probability=True)
+            svc = SVC(kernel="rbf", C=C, probability=True)
             model = svc.fit(train_data_features, labels)
             predicted_classes = model.predict(train_data_cross_validation_classwise_features)
             class_probabilities = model.predict_proba(train_data_cross_validation_classwise_features)
@@ -282,19 +318,63 @@ def des_tree(train_data_features, train_data_split_crossfold_features, test_data
 
 def svm_model(train_data_features, train_data_split_crossfold_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf, settings):
     if using_cross_validation2:
-        svm_results = np.zeros(10)
-        #k_neighbors = 2
-        #k_neighbors_results = []
-        for train, test in kf:
-            _svm = svm.SVC(probability=True, kernel='sigmoid')
-            model = _svm.fit(train_data_features[train], labels[train])
-            predicted_classes = model.predict(train_data_features[test])
-            class_probabilities = model.predict_proba(train_data_features[test])
-            print("n points:", len(predicted_classes), ", wrong: ", (labels[test] != predicted_classes).sum(), " sum of errors: ", svm_results[0])
-            svm_results[0] += (labels[test] != predicted_classes).sum()
-        k_neighbors = list(svm_results).index(min(svm_results)) + 2
-        _svm = svm.SVC(probability=True)
-        model = _svm.fit(train_data_features, labels)
+        C_base = 4.5
+        C_step = 0.5#0.005
+        C = C_base
+        _results = []
+        if(len(train_data_cross_validation_classwise_features) > 0):
+            """train_all = np.append(train_data_features, train_data_cross_validation_classwise_features, axis=0)
+            labels_all = np.append(labels, labels_cross_validation_classwise)
+            kf_all = KFold(len(train_all)-1, n_folds=int(settings['Data']['CrossValidation2']), shuffle=True)
+            for train, test in kf_all:
+                svc = SVC(kernel="linear", C=C, probability=True)
+                model = svc.fit(train_all[train], labels_all[train])
+                predicted_classes = model.predict(train_all[test])
+                predicted_classes_train = model.predict(train_all[train])
+                class_probabilities = model.predict_proba(train_all[test])
+                print("C: ",C," n points:", len(predicted_classes), " percentage: ",(labels_all[test] != predicted_classes).sum()*100/len(predicted_classes),"% percentage_train: ", (labels_all[train] != predicted_classes_train).sum()*100/len(predicted_classes_train),"%")
+                _results.append((labels_all[test] != predicted_classes).sum())
+                C += C_step"""
+            for c in pl.frange(C_base,9, C_step):
+                svc = SVC(kernel="linear", C=c, probability=True)
+                model = svc.fit(train_data_features, labels)
+                predicted_classes = model.predict(train_data_cross_validation_classwise_features)
+                class_probabilities = model.predict_proba(train_data_cross_validation_classwise_features)
+                print("C: ",c," N points:", len(predicted_classes), " percentage: ",(labels_cross_validation_classwise != predicted_classes).sum()*100/len(predicted_classes),"%")
+                print("Log_loss: ", log_loss(labels_cross_validation_classwise, class_probabilities))
+            for c in pl.frange(1,3, 1):
+                svc = SVC(kernel="linear", C=c, probability=True)
+                model = svc.fit(train_data_features, labels)
+                predicted_classes = model.predict(train_data_cross_validation_classwise_features)
+                class_probabilities = model.predict_proba(train_data_cross_validation_classwise_features)
+                print("C: ",c," N points:", len(predicted_classes), " percentage: ",(labels_cross_validation_classwise != predicted_classes).sum()*100/len(predicted_classes),"%")
+                print("Log_loss: ", log_loss(labels_cross_validation_classwise, class_probabilities))
+        else:
+            for train, test in kf:
+                svc = SVC(kernel="linear", C=C, probability=True)
+                model = svc.fit(train_data_features[train], labels[train])
+                predicted_classes = model.predict(train_data_features[test])
+                predicted_classes_train = model.predict(train_data_features[train])
+                class_probabilities = model.predict_proba(train_data_features[test])
+                print("C: ",C," n points:", len(predicted_classes), " percentage: ",(labels[test] != predicted_classes).sum()*100/len(predicted_classes),"% percentage_train: ", (labels[train] != predicted_classes_train).sum()*100/len(predicted_classes_train),"%")
+                _results.append((labels[test] != predicted_classes).sum())
+                C += C_step
+
+        C = C_base + C_step * _results.index(min(_results))
+        print("C: ", C)
+        if(len(train_data_cross_validation_classwise_features) > 0):
+            svc = SVC(kernel="linear", C=C, probability=True)
+            model = svc.fit(train_data_features, labels)
+            predicted_classes = model.predict(train_data_cross_validation_classwise_features)
+            class_probabilities = model.predict_proba(train_data_cross_validation_classwise_features)
+            print("C: ",C," N points:", len(predicted_classes), " percentage: ",(labels_cross_validation_classwise != predicted_classes).sum()*100/len(predicted_classes),"%")
+            print("Log_loss: ", log_loss(labels_cross_validation_classwise, class_probabilities))
+        svc = SVC(kernel="linear", C=C, probability=True)
+        model = svc.fit(train_data_features, labels)
+        return model.predict_proba(test_data_features), model.predict(test_data_features), model
+    else:
+        svc = SVC(kernel="linear", C=8, probability=True)
+        model = svc.fit(train_data_features, labels)
         return model.predict_proba(test_data_features), model.predict(test_data_features), model
 
 def k_nearest_neighbors(train_data_features, train_data_split_crossfold_features, test_data_features, labels, labels_cross_validation_classwise, using_cross_validation2, kf, settings):
